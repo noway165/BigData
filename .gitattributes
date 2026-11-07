@@ -1,0 +1,4 @@
+# Containers run these files; CRLF from a Windows checkout would break them.
+*.sh text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf
