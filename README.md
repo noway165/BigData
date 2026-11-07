@@ -31,7 +31,7 @@ HDFS / Parquet                  Kafka: wikipedia-analytics
 | Phần | Người phụ trách | Trạng thái trong nhánh này |
 |---|---|---|
 | Producer, raw sink, đo latency, tài liệu setup | Lâm | Có, đã chạy thử trên stack test cục bộ |
-| `docker-compose.yml`, topic, Spark core, analytics query, recovery | Giang | Có code và script; **chưa chạy**, bảng số liệu thí nghiệm còn trống |
+| `docker-compose.yml`, topic, Spark core, analytics query, recovery | Giang | Có, đã chạy end-to-end; có số liệu watermark và recovery |
 | Dashboard, slide báo cáo | Khoa | Chưa có |
 
 ## Khởi động
@@ -41,6 +41,8 @@ Toàn bộ hạ tầng nằm trong [`docker-compose.yml`](docker-compose.yml): K
 ```bash
 docker compose up -d
 ```
+
+Nhóm đang chạy bằng **Podman** (`podman compose up -d`). Các script trong `scripts/` gọi `docker`, nên với Podman thì chạy kèm biến `DOCKER=podman`, ví dụ `DOCKER=podman sh scripts/bootstrap.sh`.
 
 Tạo topic và thư mục HDFS, chạy lại được nhiều lần:
 
@@ -135,6 +137,16 @@ docker exec spark sh /opt/app/scripts/spark_analytics_selfcheck.sh
 | End-to-end observed | 15,178 | 29,457 |
 
 Qua một lần ngắt mạng producer 90 giây và tắt Kafka 60 giây, số event ở producer, Kafka và Parquet đều khớp ở 34.061, không có dòng trùng. Chi tiết và những gì chưa kiểm chứng nằm ở [`ingestion_verification.md`](outputs/experiment_results/ingestion_verification.md).
+
+Phần stream processing, đo ngày 2026-11-07 trên Podman 6.1.4 (WSL2, 7,6 GB cho container), Spark `local[2]`. Chi tiết và giới hạn ở [`docs/05_experiments_and_evaluation.md`](docs/05_experiments_and_evaluation.md).
+
+| Watermark | Dòng bị loại / 20.000 event | State rows lớn nhất | Batch duration p50 |
+|---|---|---|---|
+| 10 giây | 118 | 168 | 1068 ms |
+| 1 phút | 5 | 233 | 1288 ms |
+| 5 phút | 0 | 488 | 1400 ms |
+
+Crash recovery: `kill -9` driver Spark, 60 giây sau khởi động lại cùng checkpoint. Batch đầu sau restart là batch 25, tiếp số của phase 1, bắt đầu từ offset 16421/14672/14679 thay vì nhảy tới cuối topic (17155/15368/15346), nên không bỏ qua 2.084 event của khoảng chết.
 
 ## Tài liệu
 

@@ -8,6 +8,12 @@
 # Chạy trên máy host:  sh scripts/watermark_experiment.sh
 set -eu
 
+# Git Bash trên Windows tự đổi /opt/... thành C:/Program Files/Git/opt/..., nên
+# đường dẫn trong container bị sai. Hai biến này tắt việc chuyển đổi đó.
+MSYS_NO_PATHCONV=1
+MSYS2_ARG_CONV_EXCL='*'
+export MSYS_NO_PATHCONV MSYS2_ARG_CONV_EXCL
+
 DC="${DOCKER:-docker}"
 PY="${PYTHON:-python}"
 SAMPLE_SIZE="${WM_SAMPLE_SIZE:-20000}"
@@ -51,6 +57,8 @@ for watermark in $CONFIGS; do
     > "$OUT_REL/${slug}_replay_offsets.txt"
 
   # Checkpoint riêng cho từng cấu hình: không bao giờ chạy lại trên state của cấu hình khác.
+  # Chạy nền rồi in tiến độ: chờ câm làm người chạy không biết script còn sống, và một số
+  # runner sẽ kill tiến trình không xuất gì ra stdout trong thời gian dài.
   "$DC" exec -i \
     -e ANALYTICS_METRICS="$METRIC" \
     -e WATERMARK="$watermark" \
@@ -60,8 +68,13 @@ for watermark in $CONFIGS; do
     -e ANALYTICS_MAX_OFFSETS_PER_TRIGGER="${WM_MAX_OFFSETS_PER_TRIGGER:-2000}" \
     -e RUN_SECONDS="$RUN_SECONDS" \
     -e METRICS_OUT="$OUT_IN_CONTAINER/${slug}.json" \
-    spark sh -lc "sh /opt/app/scripts/submit_analytics_job.sh > $OUT_IN_CONTAINER/${slug}_spark.log 2>&1" \
-    || log "cấu hình $watermark kết thúc với lỗi, xem ${slug}_spark.log"
+    spark sh -lc "sh /opt/app/scripts/submit_analytics_job.sh > $OUT_IN_CONTAINER/${slug}_spark.log 2>&1" &
+  job=$!
+  while kill -0 "$job" 2>/dev/null; do
+    sleep 30
+    log "  watermark=$watermark đang chạy"
+  done
+  wait "$job" || log "cấu hình $watermark kết thúc với lỗi, xem ${slug}_spark.log"
   IFS='|'
 done
 IFS="$OLD_IFS"

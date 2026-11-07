@@ -65,7 +65,7 @@ Ba query analytics chạy trong cùng một ứng dụng Spark (`src/streaming/a
 - Window và watermark dùng `event_time` (từ `meta.dt`), không dùng thời điểm Spark xử lý. Nhờ vậy một event đến trễ vẫn được tính vào window đúng của nó, miễn là còn trong giới hạn watermark.
 - Watermark là mốc "không chờ thêm nữa": Spark coi mọi event có event time cũ hơn `max(event_time) - watermark` là quá trễ, đóng window và bỏ state tương ứng. Watermark **không** phải bộ lọc bỏ mọi event cũ hơn một khoảng cố định.
 - Watermark lớn giữ state lâu hơn, nên nhận được nhiều event trễ hơn nhưng tốn bộ nhớ hơn và kết quả ra chậm hơn. Số liệu so sánh 10 giây / 1 phút / 5 phút nằm ở [05_experiments_and_evaluation.md](05_experiments_and_evaluation.md).
-- Giá trị mặc định đang dùng: `WATERMARK=1 minute`. Lý do chọn và số liệu kèm theo ghi trong tài liệu thí nghiệm.
+- Giá trị mặc định đang dùng: `WATERMARK=1 minute`. Trên 20.000 event replay, cấu hình này chỉ bỏ 5 dòng (so với 118 dòng ở 10 giây) mà state chỉ bằng một nửa cấu hình 5 phút, và window đóng sớm hơn 4 phút. Số liệu đầy đủ ở [05_experiments_and_evaluation.md](05_experiments_and_evaluation.md).
 
 ## 5. Hợp đồng output analytics
 
@@ -80,7 +80,7 @@ Mỗi message trên `wikipedia-analytics` là một JSON object, key là tên me
 | `wiki` | `edit_count`, `activity_spike` | Wiki project |
 | `edit_count`, `bot_edits` | `edit_count` | Số event trong window và phần do bot |
 | `total_events`, `bot_count`, `human_count`, `unknown_count` | `bot_ratio` | Mẫu số là `total_events` của cùng window |
-| `bot_share`, `human_share`, `unknown_share` | `bot_ratio` | Làm tròn 4 chữ số, tổng bằng 1 |
+| `bot_share`, `human_share`, `unknown_share` | `bot_ratio` | Làm tròn 4 chữ số, nên tổng ba tỷ lệ lệch khỏi 1 tối đa 1,5e-4 |
 | `title`, `distinct_users`, `human_edits` | `activity_spike` | `distinct_users` tính bằng `approx_count_distinct` vì streaming aggregation không hỗ trợ `countDistinct` |
 | `threshold_edits`, `threshold_distinct_users` | `activity_spike` | Ngưỡng đang áp dụng, phát kèm để báo cáo tái lập được |
 

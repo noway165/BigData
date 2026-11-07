@@ -3,6 +3,12 @@
 # Chạy từ thư mục gốc repo trên máy host: sh scripts/bootstrap.sh
 set -eu
 
+# Git Bash trên Windows tự đổi /opt/... thành C:/Program Files/Git/opt/..., nên
+# đường dẫn trong container bị sai. Hai biến này tắt việc chuyển đổi đó.
+MSYS_NO_PATHCONV=1
+MSYS2_ARG_CONV_EXCL='*'
+export MSYS_NO_PATHCONV MSYS2_ARG_CONV_EXCL
+
 DC="${DOCKER:-docker}"
 RAW_TOPIC="${KAFKA_TOPIC:-wikipedia-recent-changes}"
 ANALYTICS_TOPIC="${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}"

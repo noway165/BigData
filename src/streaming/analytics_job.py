@@ -123,14 +123,17 @@ def progress_summary(batches: list) -> dict:
         return values[min(len(values) - 1, int(round(q * (len(values) - 1))))]
 
     state = [(b.get("stateOperators") or [{}])[0] for b in batches]
+    # PySpark không trả key batchDuration; thời gian một batch nằm ở
+    # durationMs.triggerExecution.
+    trigger_ms = [(b.get("durationMs") or {}).get("triggerExecution") for b in batches]
     return {
         "batches": len(batches),
         "input_rows": sum(b.get("numInputRows") or 0 for b in batches),
         "rows_dropped_by_watermark": sum(s.get("numRowsDroppedByWatermark") or 0 for s in state),
         "max_state_rows": max([s.get("numRowsTotal") or 0 for s in state] or [0]),
         "max_state_bytes": max([s.get("memoryUsedBytes") or 0 for s in state] or [0]),
-        "batch_ms_p50": pct([b.get("batchDuration") for b in batches], 0.5),
-        "batch_ms_p95": pct([b.get("batchDuration") for b in batches], 0.95),
+        "batch_ms_p50": pct(trigger_ms, 0.5),
+        "batch_ms_p95": pct(trigger_ms, 0.95),
         "last_watermark": next((b.get("eventTime", {}).get("watermark")
                                 for b in reversed(batches) if b.get("eventTime")), None),
     }
@@ -228,6 +231,7 @@ def main():
 
     run(queries, int(env("RUN_SECONDS", "0")), env("METRICS_OUT", ""),
         {"watermark": watermark, "metrics": selected, "trigger": trigger,
+         "run_seconds": int(env("RUN_SECONDS", "0")),
          "starting_offsets": env("ANALYTICS_STARTING_OFFSETS", "latest"),
          "source_topic": env("ANALYTICS_SOURCE_TOPIC", env("KAFKA_TOPIC", "wikipedia-recent-changes")),
          "max_offsets_per_trigger": env("ANALYTICS_MAX_OFFSETS_PER_TRIGGER", "50000"),

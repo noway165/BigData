@@ -2,7 +2,7 @@
 
 Tài liệu này chứa hai thí nghiệm của phần stream processing: so sánh watermark và phục hồi sau sự cố. Kết quả latency và chất lượng dữ liệu nằm ở [latency_report.md](../outputs/experiment_results/latency_report.md) và [ingestion_verification.md](../outputs/experiment_results/ingestion_verification.md). Kết quả analytics và ảnh Dashboard do phần Dashboard bổ sung.
 
-> **Trạng thái:** script của cả hai thí nghiệm đã có và chạy được bằng một lệnh. Bảng số liệu bên dưới còn trống vì chưa chạy trên máy nào cả. Chạy script rồi dán số thật vào, không ước lượng.
+Số liệu dưới đây là của một lần chạy thật ngày 2026-11-07, trên Windows 11 (16 GB RAM) với Podman 6.1.4 chạy trong WSL2 (7,6 GB khả dụng cho container): 1 broker Kafka, 1 NameNode, 1 DataNode, Spark `local[2]`, driver 1 GB. Một lần chạy trên một máy, không phải benchmark.
 
 ## 1. Thí nghiệm watermark
 
@@ -28,22 +28,37 @@ Vì sao phải replay: luồng live không lặp lại cùng phân bố event, n
 
 `scripts/watermark_report.py` sinh sẵn bảng này từ các file JSON của lần chạy.
 
+Thư mục kết quả: `outputs/experiment_results/watermark_20261107T190813Z/`.
+
 | Chỉ số | 10 giây | 1 phút | 5 phút |
 |---|---|---|---|
-| Event đầu vào | | | |
-| Dòng bị watermark loại (`numRowsDroppedByWatermark`) | | | |
-| State rows lớn nhất | | | |
-| State bytes lớn nhất | | | |
-| Batch duration p50 (ms) | | | |
-| Batch duration p95 (ms) | | | |
-| Số batch | | | |
+| Event đầu vào | 20000 | 20000 | 20000 |
+| Dòng bị watermark loại (`numRowsDroppedByWatermark`) | 118 | 5 | 0 |
+| State rows lớn nhất | 168 | 233 | 488 |
+| State bytes lớn nhất | 117380 | 143548 | 176188 |
+| Batch duration p50 (ms) | 1068 | 1288 | 1400 |
+| Batch duration p95 (ms) | 2984 | 2359 | 2269 |
+| Số batch | 12 | 12 | 12 |
+| Watermark cuối | 18:48:15.770Z | 18:47:25.770Z | 18:43:25.770Z |
+
+Metric `edit_count`, trigger 10 giây, `maxOffsetsPerTrigger` 2000, mỗi cấu hình chạy 180 giây trên cùng 20.000 event replay.
 
 ### Đọc kết quả thế nào
 
-- Watermark nhỏ: state nhỏ, window đóng sớm, nhưng loại nhiều event đến trễ hơn.
-- Watermark lớn: nhận thêm event trễ, nhưng giữ state lâu hơn nên tốn bộ nhớ, và kết quả của một window ra chậm hơn.
-- Chọn cấu hình cuối theo đánh đổi giữa độ đầy đủ, state và độ trễ, không chọn vì một cấu hình trông nhanh hơn.
-- Giới hạn: dữ liệu replay mang event time cũ, nên phân bố độ trễ của nó là phân bố của lúc thu mẫu, không phải của lúc chạy thí nghiệm.
+Lần chạy này cho thấy đúng đánh đổi lý thuyết:
+
+- Watermark càng lớn, càng ít dòng bị loại: 118 dòng ở 10 giây, 5 dòng ở 1 phút, 0 dòng ở 5 phút. Trên 20.000 event thì 118 dòng là 0,59%.
+- Watermark càng lớn, state càng lớn: 168 → 233 → 488 dòng state, 117 KB → 176 KB bộ nhớ. State tăng gần 3 lần trong khi chỉ cứu được 0,59% dữ liệu.
+- Watermark cuối của từng cấu hình lùi lại đúng bằng khoảng watermark (18:48:15 / 18:47:25 / 18:43:25), nên window đóng chậm hơn và kết quả ra chậm hơn.
+- Batch duration p50 tăng nhẹ theo state (1068 → 1288 → 1400 ms). p95 ngược lại, cao nhất ở cấu hình 10 giây (2984 ms): với 12 batch mỗi cấu hình, p95 chỉ là batch chậm nhất, nên không kết luận gì từ nó.
+
+**Chọn 1 phút** cho hệ thống: chỉ loại 5 dòng trên 20.000, state bằng một nửa cấu hình 5 phút và window đóng sớm hơn 4 phút.
+
+Giới hạn của chính thí nghiệm này:
+
+- Dữ liệu replay mang event time cũ, nên phân bố độ trễ của nó là phân bố của lúc thu mẫu, không phải của lúc chạy thí nghiệm.
+- `kafka-console-producer` chia partition khác nhau giữa các lần nạp: tổng vẫn đúng 20.000, nhưng phân bố là 6676/6630/6694, 6657/6675/6668 và 6677/6557/6766. Thứ tự event giữa các partition vì vậy không giống hệt nhau giữa ba lần chạy.
+- 12 batch mỗi cấu hình là mẫu nhỏ. Chạy dài hơn hoặc lặp nhiều lần mới nói được về phân bố latency.
 
 ## 2. Thí nghiệm phục hồi sau sự cố
 
@@ -68,22 +83,36 @@ Mọi bằng chứng nằm trong `outputs/experiment_results/recovery_<timestamp
 
 ### Kết quả
 
-| Mốc | Thời điểm (UTC) | Offset cuối topic raw | Batch cuối trong `commits/` | Số dòng đã xử lý |
-|---|---|---|---|---|
-| Trước khi kill | | | | |
-| Lúc kill | | | | — |
-| Sau khoảng chết (producer vẫn gửi) | | | — | — |
-| Sau khi restart | | | | |
+Thư mục bằng chứng: `outputs/experiment_results/recovery_20261107T185544Z/`. Query `analytics_edit_count_recovery`, watermark 1 phút, trigger 10 giây.
 
-Điều phải chứng minh: batch đầu tiên sau khi restart bắt đầu từ đúng offset mà batch cuối trước khi chết đã commit, chứ không nhảy tới cuối topic. Offset này đọc được ở `sources[].startOffset` trong `phase2_progress.json` và ở file mới nhất trong `offsets/` của checkpoint.
+| Mốc | Thời điểm (UTC) | Offset cuối topic raw (p0/p1/p2) |
+|---|---|---|
+| Khởi động phase 1 | 18:55:45 | 13250 / 11954 / 12024 |
+| Lúc `kill -9` | 19:00:04 | 16427 / 14676 / 14686 |
+| Sau 60 giây query chết, producer vẫn gửi | 19:01:05 | 17155 / 15368 / 15346 |
+| Khởi động lại cùng checkpoint | 19:01:07 | — |
+| Kết thúc phase 2 | 19:06:08 | 21064 / 19016 / 18582 |
+
+Điều đã chứng minh được:
+
+| Bằng chứng | Giá trị quan sát |
+|---|---|
+| Batch đầu sau restart | `batchId` **25**, tiếp số của phase 1 (phase 1 dừng ở batch 24). Một query mới không có checkpoint sẽ bắt đầu lại từ batch 0. |
+| `startOffset` của batch 25 | 16421 / 14672 / 14679 — nằm ngay dưới mức cuối topic lúc kill (16427 / 14676 / 14686) |
+| Không nhảy tới cuối topic | Nếu bỏ qua checkpoint, với `startingOffsets=latest` query sẽ bắt đầu từ 17155 / 15368 / 15346 và bỏ qua 728 + 696 + 660 = 2084 event của khoảng chết |
+| Xử lý bù phần tồn đọng | Batch 25 đọc 2419 dòng trong một lần, các batch sau trở lại mức bình thường (248 dòng) |
+| Tổng phase 2 | 10.466 dòng trong 25 batch (25 → 49), không batch nào lỗi |
+| Topic analytics tiếp tục tăng | 640 message lúc kill → 1041 message sau phase 2 |
+
+`startOffset` thấp hơn mức cuối topic lúc kill 6/4/7 message trên từng partition: đó là phần batch cuối chưa commit xong khi bị `kill -9`, và Spark xử lý lại đúng phần đó. Đây là at-least-once ở chặng Kafka → Spark, không phải exactly-once.
 
 ### Guarantee rút ra được
 
-Thí nghiệm này chứng minh **Kafka source offset recovery qua checkpoint của Spark**. Nó không chứng minh exactly-once cho toàn pipeline. Bảng guarantee theo từng chặng nằm ở [02_architecture.md](02_architecture.md) mục 6. Riêng Kafka sink của nhánh analytics là at-least-once: một batch chạy lại có thể phát lại message của cùng một window, nên Dashboard phải chịu được bản ghi lặp theo `(metric, window_start)`.
+Thí nghiệm này chứng minh **Kafka source offset recovery qua checkpoint của Spark**: không mất event nào của khoảng chết, và batch dở bị xử lý lại. Nó không chứng minh exactly-once cho toàn pipeline. Bảng guarantee theo từng chặng nằm ở [02_architecture.md](02_architecture.md) mục 6. Riêng Kafka sink của nhánh analytics là at-least-once: một batch chạy lại có thể phát lại message của cùng một window, nên Dashboard phải chịu được bản ghi lặp theo `(metric, window_start)`.
 
 ### Có thể làm thêm
 
-Dừng Kafka broker trong lúc Spark đang chạy. Chỉ làm sau khi kịch bản Spark recovery đã chạy ổn định ít nhất hai lần, vì dàn trải nhiều loại sự cố trước đó chỉ làm kết quả khó diễn giải.
+Lần chạy trên chỉ là **một** lần. Chạy lại ít nhất một lần nữa (đổi `RECOVERY_SUFFIX` để dùng checkpoint mới) rồi mới nói về tính lặp lại. Sau đó có thể thử dừng Kafka broker trong lúc Spark đang chạy; đừng dàn trải nhiều loại sự cố trước khi kịch bản này chạy ổn định.
 
 ## 3. Giới hạn của thuật toán phát hiện đột biến
 

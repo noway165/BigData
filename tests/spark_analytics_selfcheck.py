@@ -63,7 +63,8 @@ ratio = bot_ratio(prepared, WATERMARK).collect()
 assert len(ratio) == 1, ratio  # mọi event nằm trong cùng window 5 phút
 r = ratio[0]
 assert (r["total_events"], r["bot_count"], r["human_count"], r["unknown_count"]) == (19, 5, 9, 5)
-assert abs(r["bot_share"] + r["human_share"] + r["unknown_share"] - 1.0) < 1e-6
+# Ba tỷ lệ được làm tròn 4 chữ số, nên tổng lệch khỏi 1 tối đa 1,5e-4.
+assert abs(r["bot_share"] + r["human_share"] + r["unknown_share"] - 1.0) <= 1.5e-4, r
 assert str(r["window_start"]) == "2026-11-07 16:20:00"
 
 spikes = activity_spike(prepared, WATERMARK).collect()

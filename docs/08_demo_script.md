@@ -89,6 +89,7 @@ Latency p50/p95 ([latency_report.md](../outputs/experiment_results/latency_repor
 
 | Hiện tượng | Xử lý |
 |---|---|
+| Submit hai job cùng lúc khi cache Ivy còn trống | Hai tiến trình `spark-submit` cùng resolve một package có thể chặn nhau và job treo không ghi gì. Submit job đầu, chờ nó chạy, rồi submit job thứ hai. Luôn redirect log (`> /opt/app/outputs/<ten>.log 2>&1`) để nhìn thấy khi nó treo. |
 | `spark-submit` treo ở bước tải package | Jar đã nằm trong volume `spark_ivy`; kiểm tra `docker exec spark ls /tmp/ivy/jars`. Thiếu thì chạy lại một job trước đó để nạp cache. |
 | Query lỗi ghi HDFS | Kiểm tra namenode còn sống: `docker exec namenode hdfs dfsadmin -report`. |
 | Topic analytics rỗng | Window chưa đóng. `outputMode("append")` chỉ phát khi window đóng, nên phải chờ qua `window + watermark`. |

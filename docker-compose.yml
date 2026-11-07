@@ -51,8 +51,10 @@ services:
       - "${HDFS_UI_PORT:-9870}:9870"
     env_file: [./config/hadoop.env]
     environment:
-      # Entrypoint tự format namenode nếu thư mục này chưa tồn tại.
-      ENSURE_NAMENODE_DIR: /hadoop/dfs/name
+      # Entrypoint tự format namenode nếu thư mục này chưa tồn tại. Phải trỏ vào
+      # `current`, không phải /hadoop/dfs/name: volume mount tạo sẵn thư mục cha,
+      # nên namenode sẽ không bao giờ được format và khởi động lỗi "not formatted".
+      ENSURE_NAMENODE_DIR: /hadoop/dfs/name/current
       HDFS_NAMENODE_OPTS: -Xmx512m
     volumes:
       - namenode_data:/hadoop/dfs/name

@@ -1,0 +1,28 @@
+[18:55:45] metric=edit_count checkpoint=hdfs://namenode:8020/checkpoints/analytics_edit_count_recovery run1=240s gap=60s run2=240s
+[18:55:45] PHASE 1: khởi động query, chạy 240s
+[18:56:20] PHASE 1 đang chạy: còn 210s
+[18:56:50] PHASE 1 đang chạy: còn 180s
+[18:57:21] PHASE 1 đang chạy: còn 150s
+[18:57:51] PHASE 1 đang chạy: còn 120s
+[18:58:21] PHASE 1 đang chạy: còn 90s
+[18:58:51] PHASE 1 đang chạy: còn 60s
+[18:59:21] PHASE 1 đang chạy: còn 30s
+[18:59:51] PHASE 1 đang chạy: còn 0s
+[19:00:04] KILL -9 driver Spark (pid: 13546
+13550
+13599) — mô phỏng sự cố, không shutdown êm
+[19:00:05] query đã chết; producer vẫn gửi, chờ 60s để Kafka dồn dữ liệu chưa xử lý
+[19:00:35] query đã chết: còn 30s
+[19:01:05] query đã chết: còn 0s
+[19:01:07] PHASE 2: khởi động lại CÙNG query, CÙNG checkpoint, chạy 240s
+[19:01:37] PHASE 2 đang chạy: còn 270s
+[19:02:07] PHASE 2 đang chạy: còn 240s
+[19:02:37] PHASE 2 đang chạy: còn 210s
+[19:03:07] PHASE 2 đang chạy: còn 180s
+[19:03:37] PHASE 2 đang chạy: còn 150s
+[19:04:08] PHASE 2 đang chạy: còn 120s
+[19:04:38] PHASE 2 đang chạy: còn 90s
+[19:05:08] PHASE 2 đang chạy: còn 60s
+[19:05:38] PHASE 2 đang chạy: còn 30s
+[19:06:08] PHASE 2 đang chạy: còn 0s
+[19:06:20] xong. Bằng chứng: outputs/experiment_results/recovery_20261107T185544Z
