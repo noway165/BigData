@@ -1,0 +1,96 @@
+# Kịch bản demo kỹ thuật
+
+Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pipeline và recovery; thí nghiệm watermark và latency thì trình bày bằng log và bảng đã lưu, không chạy lại trước lớp.
+
+## Chuẩn bị trước buổi bảo vệ
+
+| Việc | Lệnh / ghi chú |
+|---|---|
+| Tải sẵn jar connector vào cache Ivy | Chạy một lần `docker compose up -d && sh scripts/bootstrap.sh`, rồi `docker exec spark sh /opt/app/scripts/spark_analytics_selfcheck.sh`. Volume `spark_ivy` giữ jar, buổi demo không cần mạng để tải. |
+| Pull sẵn image | `docker compose pull` |
+| Chạy trước thí nghiệm watermark và recovery | Giữ nguyên thư mục trong `outputs/experiment_results/` để trình bày |
+| Mở sẵn tab | NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040` |
+| Chạy producer sớm 10–15 phút | Để HDFS đã có vài partition giờ và Kafka đã có dữ liệu |
+
+## Trình tự demo
+
+**1. Khởi động hạ tầng**
+
+```bash
+docker compose up -d
+```
+
+```bash
+sh scripts/bootstrap.sh
+```
+
+Chỉ ra: Kafka topic 3 partition, retention 24 giờ; thư mục `/checkpoints` trên HDFS.
+
+**2. Producer đọc SSE và gửi vào Kafka**
+
+```bash
+docker compose --profile producer up -d && docker logs -f producer
+```
+
+Chỉ ra dòng thống kê: `received`, `sent`, `canary_skipped`, `reconnects`.
+
+**3. Raw sink ghi Parquet xuống HDFS**
+
+```bash
+docker exec -d spark sh /opt/app/scripts/submit_raw_job.sh
+```
+
+```bash
+docker exec namenode hdfs dfs -ls -R /data/raw/recent_changes
+```
+
+Chỉ ra partition `year=/month=/day=/hour=` theo event time, và `_spark_metadata`.
+
+**4. Analytics chạy với event-time window và watermark**
+
+```bash
+docker exec -d spark sh /opt/app/scripts/submit_analytics_job.sh
+```
+
+```bash
+sh scripts/consume_analytics.sh 10
+```
+
+Chỉ ra ba metric trên cùng một topic, biên window theo event time, và `threshold_edits` đi kèm bản ghi spike. Mở Spark UI tab Structured Streaming: ba query, mỗi query một checkpoint riêng.
+
+**5. Dashboard**
+
+Phần Dashboard trình bày, đọc từ topic `wikipedia-analytics`.
+
+**6. Crash recovery**
+
+Phần ăn điểm. Nếu còn thời gian thì chạy rút gọn:
+
+```bash
+RECOVERY_RUN1_SECONDS=60 RECOVERY_GAP_SECONDS=45 RECOVERY_RUN2_SECONDS=90 sh scripts/crash_recovery_test.sh
+```
+
+Nếu không còn thời gian thì mở thư mục `outputs/experiment_results/recovery_<timestamp>/` và đối chiếu: offset Kafka tăng trong lúc Spark chết, batch đầu sau restart bắt đầu từ offset đã commit, không nhảy tới cuối topic.
+
+**7. Bảng số liệu**
+
+Latency p50/p95 ([latency_report.md](../outputs/experiment_results/latency_report.md)), so sánh watermark và recovery ([05_experiments_and_evaluation.md](05_experiments_and_evaluation.md)).
+
+## Phần nói về kỹ thuật
+
+- Vì sao có Kafka ở giữa: tách producer khỏi Spark, nên Spark chết thì dữ liệu vẫn vào Kafka và đọc tiếp được từ offset. Đây là điều kiện để demo recovery.
+- Event time so với processing time: window dùng `event_time` từ `meta.dt`, nên event đến trễ vẫn vào đúng window của nó.
+- Watermark: mốc Spark ngừng chờ event trễ, để đóng window và bỏ state. Watermark lớn giữ state lâu hơn nên tốn bộ nhớ hơn.
+- Checkpoint lưu gì: offset Kafka đã lên kế hoạch và đã commit, metadata query và state của aggregation. Phải nằm trên HDFS, vì checkpoint trong filesystem container sẽ mất khi container bị xóa.
+- Guarantee: không tuyên bố exactly-once toàn hệ thống. Nói theo từng chặng, bảng ở [02_architecture.md](02_architecture.md) mục 6.
+- Nút thắt khi tăng tải: với Spark `local[2]` và một broker, giới hạn nằm ở số core của driver và `maxOffsetsPerTrigger`, không nằm ở Kafka.
+
+## Nếu có sự cố trong lúc demo
+
+| Hiện tượng | Xử lý |
+|---|---|
+| `spark-submit` treo ở bước tải package | Jar đã nằm trong volume `spark_ivy`; kiểm tra `docker exec spark ls /tmp/ivy/jars`. Thiếu thì chạy lại một job trước đó để nạp cache. |
+| Query lỗi ghi HDFS | Kiểm tra namenode còn sống: `docker exec namenode hdfs dfsadmin -report`. |
+| Topic analytics rỗng | Window chưa đóng. `outputMode("append")` chỉ phát khi window đóng, nên phải chờ qua `window + watermark`. |
+| Producer không gửi | `docker logs producer`: nếu `reconnects` tăng liên tục thì là mạng hoặc rate limit của Wikimedia. |
+| Hết RAM | Dừng nhánh raw (`docker exec spark pkill -f raw_to_hdfs.py`), demo nhánh analytics; hoặc giảm `ANALYTICS_METRICS` xuống một metric. |
