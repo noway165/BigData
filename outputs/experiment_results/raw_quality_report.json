@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-11-07T17:32:43+00:00",
+  "total_rows": 34061,
+  "event_time_range": [
+    "2026-11-07 17:14:37.941000",
+    "2026-11-07 17:30:58.243000"
+  ],
+  "parquet_schema": "struct<event_id:string,event_time:timestamp,producer_received_at:timestamp,wiki:string,title:string,type:string,namespace:int,user:string,bot:boolean,timestamp:bigint,raw_value:string,kafka_partition:int,kafka_offset:bigint,spark_processed_at:timestamp,year:int,month:int,day:int,hour:int>",
+  "missing_by_field": {
+    "event_id": 0,
+    "event_time": 0,
+    "producer_received_at": 0,
+    "raw_value": 0,
+    "wiki": 0,
+    "title": 0,
+    "type": 0,
+    "namespace": 0,
+    "user": 0,
+    "bot": 0,
+    "timestamp": 0
+  },
+  "duplicate_event_id_rows": 0,
+  "source_offsets": [
+    {
+      "topic": "eqiad.mediawiki.recentchange",
+      "partition": "0",
+      "min": 6652797203,
+      "max": 6652797224,
+      "distinct": 22,
+      "missing": 0
+    },
+    {
+      "topic": "codfw.mediawiki.recentchange",
+      "partition": "0",
+      "min": 2132404030,
+      "max": 2132438069,
+      "distinct": 34039,
+      "missing": 1
+    }
+  ],
+  "rows_by_type": {
+    "new": 1297,
+    "log": 1572,
+    "edit": 20728,
+    "categorize": 10464
+  },
+  "rows_by_bot_value": {
+    "True": 15281,
+    "False": 18780
+  },
+  "latency": {
+    "source_to_producer": {
+      "samples": 34061,
+      "p50_s": 0.31599998474121094,
+      "p95_s": 53.157999992370605,
+      "min_s": 0.28099989891052246,
+      "max_s": 102.90899991989136,
+      "negative_samples": 0
+    },
+    "producer_to_processing": {
+      "samples": 34061,
+      "p50_s": 18.924999952316284,
+      "p95_s": 97.72599983215332,
+      "min_s": 0.028999805450439453,
+      "max_s": 146.87199997901917,
+      "negative_samples": 0
+    },
+    "end_to_end": {
+      "samples": 34061,
+      "p50_s": 19.25,
+      "p95_s": 113.48699998855591,
+      "min_s": 0.3209998607635498,
+      "max_s": 147.19400000572205,
+      "negative_samples": 0
+    }
+  }
+}

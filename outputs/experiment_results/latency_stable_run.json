@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-11-07T17:23:24+00:00",
+  "total_rows": 17249,
+  "event_time_range": [
+    "2026-11-07 17:14:37.941000",
+    "2026-11-07 17:22:59.545000"
+  ],
+  "parquet_schema": "struct<event_id:string,event_time:timestamp,producer_received_at:timestamp,wiki:string,title:string,type:string,namespace:int,user:string,bot:boolean,timestamp:bigint,raw_value:string,kafka_partition:int,kafka_offset:bigint,spark_processed_at:timestamp,year:int,month:int,day:int,hour:int>",
+  "missing_by_field": {
+    "event_id": 0,
+    "event_time": 0,
+    "producer_received_at": 0,
+    "raw_value": 0,
+    "wiki": 0,
+    "title": 0,
+    "type": 0,
+    "namespace": 0,
+    "user": 0,
+    "bot": 0,
+    "timestamp": 0
+  },
+  "duplicate_event_id_rows": 0,
+  "source_offsets": [
+    {
+      "topic": "eqiad.mediawiki.recentchange",
+      "partition": "0",
+      "min": 6652797203,
+      "max": 6652797216,
+      "distinct": 14,
+      "missing": 0
+    },
+    {
+      "topic": "codfw.mediawiki.recentchange",
+      "partition": "0",
+      "min": 2132404030,
+      "max": 2132421265,
+      "distinct": 17235,
+      "missing": 1
+    }
+  ],
+  "rows_by_type": {
+    "new": 805,
+    "log": 752,
+    "edit": 10263,
+    "categorize": 5429
+  },
+  "rows_by_bot_value": {
+    "True": 7461,
+    "False": 9788
+  },
+  "latency": {
+    "source_to_producer": {
+      "samples": 17249,
+      "p50_s": 0.30299997329711914,
+      "p95_s": 0.4070000648498535,
+      "min_s": 0.28099989891052246,
+      "max_s": 1.315000057220459,
+      "negative_samples": 0
+    },
+    "producer_to_processing": {
+      "samples": 17249,
+      "p50_s": 14.858000040054321,
+      "p95_s": 29.1489999294281,
+      "min_s": 0.028999805450439453,
+      "max_s": 43.193000078201294,
+      "negative_samples": 0
+    },
+    "end_to_end": {
+      "samples": 17249,
+      "p50_s": 15.17799997329712,
+      "p95_s": 29.457000017166138,
+      "min_s": 0.3209998607635498,
+      "max_s": 43.49000000953674,
+      "negative_samples": 0
+    }
+  }
+}

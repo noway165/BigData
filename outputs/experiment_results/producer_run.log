@@ -1,0 +1,41 @@
+2026-11-07 17:14:37,135 INFO producer start topic=wikipedia-recent-changes bootstrap=kafka:9092
+2026-11-07 17:14:38,238 INFO producer connected to https://stream.wikimedia.org/v2/stream/recentchange last_event_id=False
+2026-11-07 17:15:07,097 INFO producer stats {'received': 894, 'sent': 894, 'missing_event_id': 0, 'delivered': 892} queued=2 source_to_producer n=894 p50=0.302s p95=0.457s
+2026-11-07 17:15:37,116 INFO producer stats {'received': 1861, 'sent': 1859, 'missing_event_id': 0, 'delivered': 1856, 'canary_skipped': 2} queued=3 source_to_producer n=965 p50=0.301s p95=0.373s
+2026-11-07 17:16:07,152 INFO producer stats {'received': 2901, 'sent': 2899, 'missing_event_id': 0, 'delivered': 2898, 'canary_skipped': 2} queued=1 source_to_producer n=1040 p50=0.300s p95=0.402s
+2026-11-07 17:16:37,175 INFO producer stats {'received': 3935, 'sent': 3933, 'missing_event_id': 0, 'delivered': 3931, 'canary_skipped': 2} queued=2 source_to_producer n=1034 p50=0.301s p95=0.496s
+2026-11-07 17:17:07,191 INFO producer stats {'received': 4865, 'sent': 4863, 'missing_event_id': 0, 'delivered': 4862, 'canary_skipped': 2} queued=1 source_to_producer n=930 p50=0.303s p95=0.438s
+2026-11-07 17:17:37,354 INFO producer stats {'received': 5987, 'sent': 5985, 'missing_event_id': 0, 'delivered': 5984, 'canary_skipped': 2} queued=1 source_to_producer n=1122 p50=0.302s p95=0.383s
+2026-11-07 17:18:07,365 INFO producer stats {'received': 7032, 'sent': 7030, 'missing_event_id': 0, 'delivered': 7027, 'canary_skipped': 2} queued=3 source_to_producer n=1045 p50=0.301s p95=0.356s
+2026-11-07 17:18:37,372 INFO producer stats {'received': 8055, 'sent': 8053, 'missing_event_id': 0, 'delivered': 8052, 'canary_skipped': 2} queued=1 source_to_producer n=1023 p50=0.306s p95=0.835s
+2026-11-07 17:19:07,449 INFO producer stats {'received': 9147, 'sent': 9145, 'missing_event_id': 0, 'delivered': 9144, 'canary_skipped': 2} queued=1 source_to_producer n=1092 p50=0.302s p95=0.353s
+2026-11-07 17:19:37,453 INFO producer stats {'received': 10140, 'sent': 10138, 'missing_event_id': 0, 'delivered': 10137, 'canary_skipped': 2} queued=1 source_to_producer n=993 p50=0.305s p95=0.823s
+2026-11-07 17:20:07,499 INFO producer stats {'received': 11202, 'sent': 11200, 'missing_event_id': 0, 'delivered': 11199, 'canary_skipped': 2} queued=1 source_to_producer n=1062 p50=0.303s p95=0.397s
+2026-11-07 17:20:37,502 INFO producer stats {'received': 12264, 'sent': 12262, 'missing_event_id': 0, 'delivered': 12259, 'canary_skipped': 2} queued=3 source_to_producer n=1062 p50=0.303s p95=0.344s
+2026-11-07 17:21:07,607 INFO producer stats {'received': 13305, 'sent': 13303, 'missing_event_id': 0, 'delivered': 13302, 'canary_skipped': 2} queued=1 source_to_producer n=1041 p50=0.305s p95=0.400s
+2026-11-07 17:21:37,611 INFO producer stats {'received': 14404, 'sent': 14402, 'missing_event_id': 0, 'delivered': 14399, 'canary_skipped': 2} queued=3 source_to_producer n=1099 p50=0.305s p95=0.371s
+2026-11-07 17:22:07,630 INFO producer stats {'received': 15411, 'sent': 15409, 'missing_event_id': 0, 'delivered': 15408, 'canary_skipped': 2} queued=1 source_to_producer n=1007 p50=0.307s p95=0.388s
+2026-11-07 17:22:37,631 INFO producer stats {'received': 16445, 'sent': 16443, 'missing_event_id': 0, 'delivered': 16442, 'canary_skipped': 2} queued=1 source_to_producer n=1034 p50=0.307s p95=0.481s
+2026-11-07 17:23:07,650 INFO producer stats {'received': 17499, 'sent': 17497, 'missing_event_id': 0, 'delivered': 17496, 'canary_skipped': 2} queued=1 source_to_producer n=1054 p50=0.311s p95=0.554s
+2026-11-07 17:23:37,705 INFO producer stats {'received': 18601, 'sent': 18599, 'missing_event_id': 0, 'delivered': 18598, 'canary_skipped': 2} queued=1 source_to_producer n=1102 p50=0.307s p95=0.355s
+2026-11-07 17:24:07,710 INFO producer stats {'received': 19540, 'sent': 19538, 'missing_event_id': 0, 'delivered': 19536, 'canary_skipped': 2} queued=2 source_to_producer n=939 p50=0.309s p95=0.362s
+2026-11-07 17:25:21,767 WARNING producer SSE disconnected at 2026-11-07T17:25:21.762Z: TimeoutError('The read operation timed out'); retry in 0.6s
+2026-11-07 17:25:22,453 WARNING producer SSE disconnected at 2026-11-07T17:25:21.762Z: URLError(gaierror(-3, 'Temporary failure in name resolution')); retry in 1.3s
+2026-11-07 17:25:23,726 WARNING producer SSE disconnected at 2026-11-07T17:25:21.762Z: URLError(gaierror(-3, 'Temporary failure in name resolution')); retry in 2.5s
+2026-11-07 17:25:26,200 WARNING producer SSE disconnected at 2026-11-07T17:25:21.762Z: URLError(gaierror(-3, 'Temporary failure in name resolution')); retry in 5.0s
+2026-11-07 17:25:31,162 WARNING producer SSE disconnected at 2026-11-07T17:25:21.762Z: URLError(gaierror(-3, 'Temporary failure in name resolution')); retry in 15.3s
+2026-11-07 17:25:46,427 WARNING producer SSE disconnected at 2026-11-07T17:25:21.762Z: URLError(gaierror(-3, 'Temporary failure in name resolution')); retry in 16.6s
+2026-11-07 17:26:04,136 INFO producer connected to https://stream.wikimedia.org/v2/stream/recentchange last_event_id=True
+2026-11-07 17:26:04,136 WARNING producer SSE gap closed gap_s=42.4 resumed_from_last_id=True
+2026-11-07 17:26:04,137 INFO producer stats {'received': 20081, 'sent': 20079, 'missing_event_id': 0, 'delivered': 20078, 'canary_skipped': 2, 'reconnects': 6} queued=1 source_to_producer n=541 p50=0.307s p95=0.409s
+2026-11-07 17:26:34,140 INFO producer stats {'received': 24511, 'sent': 24509, 'missing_event_id': 0, 'delivered': 24508, 'canary_skipped': 2, 'reconnects': 6} queued=1 source_to_producer n=4430 p50=34.490s p95=96.866s
+2026-11-07 17:27:04,358 INFO producer stats {'received': 25870, 'sent': 25868, 'missing_event_id': 0, 'delivered': 25867, 'canary_skipped': 2, 'reconnects': 6} queued=1 source_to_producer n=1359 p50=0.317s p95=0.351s
+2026-11-07 17:27:34,410 INFO producer stats {'received': 26885, 'sent': 26883, 'missing_event_id': 0, 'delivered': 26554, 'canary_skipped': 2, 'reconnects': 6} queued=329 source_to_producer n=1015 p50=0.323s p95=0.494s
+2026-11-07 17:28:04,430 INFO producer stats {'received': 27976, 'sent': 27974, 'missing_event_id': 0, 'delivered': 26554, 'canary_skipped': 2, 'reconnects': 6} queued=1420 source_to_producer n=1091 p50=0.322s p95=0.420s
+2026-11-07 17:28:34,460 INFO producer stats {'received': 29098, 'sent': 29096, 'missing_event_id': 0, 'delivered': 29091, 'canary_skipped': 2, 'reconnects': 6} queued=5 source_to_producer n=1122 p50=0.323s p95=0.774s
+2026-11-07 17:29:04,504 INFO producer stats {'received': 30196, 'sent': 30194, 'missing_event_id': 0, 'delivered': 30193, 'canary_skipped': 2, 'reconnects': 6} queued=1 source_to_producer n=1098 p50=0.326s p95=0.465s
+2026-11-07 17:29:34,529 INFO producer stats {'received': 31087, 'sent': 31085, 'missing_event_id': 0, 'delivered': 31082, 'canary_skipped': 2, 'reconnects': 6} queued=3 source_to_producer n=891 p50=0.328s p95=0.607s
+2026-11-07 17:30:04,532 INFO producer stats {'received': 32158, 'sent': 32156, 'missing_event_id': 0, 'delivered': 32153, 'canary_skipped': 2, 'reconnects': 6} queued=3 source_to_producer n=1071 p50=0.325s p95=0.376s
+2026-11-07 17:30:34,536 INFO producer stats {'received': 33197, 'sent': 33195, 'missing_event_id': 0, 'delivered': 33193, 'canary_skipped': 2, 'reconnects': 6} queued=2 source_to_producer n=1039 p50=0.327s p95=0.449s
+2026-11-07 17:30:58,580 INFO producer stopping on signal 15
+2026-11-07 17:30:58,598 INFO producer shutdown final_counts={'received': 34063, 'sent': 34061, 'missing_event_id': 0, 'delivered': 34061, 'canary_skipped': 2, 'reconnects': 6} undelivered=0
