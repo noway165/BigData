@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "dashboard"))
 
-from dashboard import new_state, render_page, update_state  # noqa: E402
+from dashboard import log_entry, mask_user, new_state, render_page, update_state  # noqa: E402
 
 
 def edit(wiki, window, count, bots=0):
@@ -83,5 +83,41 @@ assert "Human" in page and "80" in page
 empty = render_page(new_state(), "12:00:00")
 assert "Chưa có window nào đóng" in empty
 assert "<html" in empty
+
+# Che tên người dùng: tên thường giữ 3 ký tự đầu, IPv4/IPv6 giữ phần đầu, rỗng thì ẩn danh.
+assert mask_user("Printstream") == "Pri***"
+assert mask_user("Ab") == "A***"
+assert mask_user("171.224.3.9") == "171.224.*.*"
+assert mask_user("2001:db8:85a3::8a2e") == "2001:db8:*"
+assert mask_user(None) == "ẩn danh"
+assert mask_user("") == "ẩn danh"
+
+WIKIS, KINDS = frozenset({"enwiki", "viwiki"}), frozenset({"edit", "new"})
+
+
+def raw(**over):
+    event = {"wiki": "enwiki", "type": "edit", "title": "Ranjeev Puri", "user": "ABlitzz",
+             "bot": False, "meta": {"dt": "2026-11-09T16:18:52Z"},
+             "length": {"old": 1200, "new": 1612}}
+    event.update(over)
+    return event
+
+
+entry = log_entry(raw(), WIKIS, KINDS)
+assert entry["time"] == "16:18:52"
+assert entry["user"] == "ABl***"
+assert entry["kind"] == "edit" and entry["delta"] == 412 and entry["bot"] is False
+
+# Wiki/loại ngoài bộ lọc hoặc thiếu meta.dt thì bỏ; `comment` (văn bản tự do của người lạ) không bao giờ vào entry.
+assert log_entry(raw(wiki="commonswiki"), WIKIS, KINDS) is None
+assert log_entry(raw(type="categorize"), WIKIS, KINDS) is None
+assert log_entry(raw(type="log"), WIKIS, KINDS) is None
+assert log_entry(raw(meta={}), WIKIS, KINDS) is None
+assert log_entry(raw(user=None), WIKIS, KINDS)["user"] == "ẩn danh"
+assert log_entry(raw(type="new", length={"new": 800}), WIKIS, KINDS)["delta"] == 800
+assert log_entry(raw(length={}), WIKIS, KINDS)["delta"] is None
+assert log_entry(raw(bot=True), WIKIS, KINDS)["bot"] is True
+assert "comment" not in log_entry(raw(comment="xin chao"), WIKIS, KINDS)
+assert log_entry(raw(title="A & <b>"), WIKIS, KINDS)["title"] == "A & <b>"  # escape thuộc về renderer
 
 print("DASHBOARD SELFCHECK OK")

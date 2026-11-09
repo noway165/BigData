@@ -81,6 +81,39 @@ def update_state(state: dict, rec: dict) -> dict:
     return state
 
 
+def mask_user(name) -> str:
+    """Che tên người dùng trước khi lên màn chiếu. IP giữ phần mạng, tên thường giữ vài ký tự đầu."""
+    if not name:
+        return "ẩn danh"
+    parts = name.split(".")
+    if len(parts) == 4 and all(p.isdigit() for p in parts):
+        return f"{parts[0]}.{parts[1]}.*.*"
+    if ":" in name:
+        return ":".join(name.split(":")[:2]) + ":*"
+    return name[:3] + "***" if len(name) >= 3 else name[:1] + "***"
+
+
+def log_entry(event: dict, wikis: frozenset, kinds: frozenset):
+    """Một event Wikimedia -> dòng log, hoặc None nếu ngoài bộ lọc / thiếu meta.dt.
+
+    Cố ý không mang `comment` (văn bản tự do của người lạ) và không escape: escape là việc của renderer.
+    """
+    dt = (event.get("meta") or {}).get("dt")
+    if event.get("wiki") not in wikis or event.get("type") not in kinds or not dt:
+        return None
+    length = event.get("length") or {}
+    new_len = length.get("new")
+    return {
+        "time": dt.split("T", 1)[-1][:8],
+        "wiki": event["wiki"],
+        "user": mask_user(event.get("user")),
+        "bot": bool(event.get("bot")),
+        "kind": event["type"],
+        "title": event.get("title") or "",
+        "delta": None if new_len is None else new_len - (length.get("old") or 0),
+    }
+
+
 def _hhmm(iso: str) -> str:
     """'2026-11-07T18:48:00.000Z' -> '18:48'. Chuỗi lạ thì trả nguyên văn."""
     if not iso or "T" not in iso:
