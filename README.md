@@ -32,7 +32,8 @@ HDFS / Parquet                  Kafka: wikipedia-analytics
 |---|---|---|
 | Producer, raw sink, đo latency, tài liệu setup | Lâm | Có, đã chạy thử trên stack test cục bộ |
 | `docker-compose.yml`, topic, Spark core, analytics query, recovery | Giang | Có, đã chạy end-to-end; có số liệu watermark và recovery |
-| Dashboard, slide báo cáo | Khoa | Slide chưa có. Dashboard: có bản tối thiểu `src/dashboard/dashboard.py` để demo được ngay, thay bằng bản của Khoa khi xong |
+| Định nghĩa metric, Dashboard, trả lời phản biện | Khoa | Có; logic Dashboard có test, giao diện cần chạy với pipeline thật để chụp ảnh |
+| Live feed (`src/dashboard/dashboard.py`) | Giang | Có; trang HTTP riêng ở cổng 8080, đọc cả topic raw để hiện log từng lượt sửa |
 
 ## Khởi động
 
@@ -90,6 +91,14 @@ Kiểm tra output analytics:
 sh scripts/consume_analytics.sh 10
 ```
 
+Mở Dashboard (đọc topic `wikipedia-analytics`), rồi vào `http://localhost:8501`:
+
+```bash
+docker compose --profile dashboard up -d
+```
+
+Hoặc chạy trên máy host: `pip install -r src/dashboard/requirements.txt && streamlit run src/dashboard/app.py`.
+
 Xuất báo cáo chất lượng dữ liệu và latency:
 
 ```bash
@@ -123,6 +132,8 @@ pip install -r src/producer/requirements.txt pytest
 ```bash
 python -m pytest tests -q
 ```
+
+Test logic Dashboard cần `pandas`: `pip install pandas`.
 
 Kiểm tra phép biến đổi Spark trên event mẫu:
 
@@ -162,6 +173,7 @@ Crash recovery: `kill -9` driver Spark, 60 giây sau khởi động lại cùng 
 
 | File | Nội dung |
 |---|---|
+| [`docs/01_goals_scope.md`](docs/01_goals_scope.md) | Mục tiêu, phạm vi, định nghĩa ba metric và giới hạn của chúng |
 | [`docs/02_architecture.md`](docs/02_architecture.md) | Thành phần, các streaming query, checkpoint, watermark, guarantee từng chặng |
 | [`docs/03_data_contract.md`](docs/03_data_contract.md) | Message Kafka, schema thực tế, raw Parquet, định nghĩa latency |
 | [`docs/04_technology_stack.md`](docs/04_technology_stack.md) | Phiên bản đã test và lý do chọn công nghệ |
@@ -169,6 +181,7 @@ Crash recovery: `kill -9` driver Spark, 60 giây sau khởi động lại cùng 
 | [`docs/05_experiments_and_evaluation.md`](docs/05_experiments_and_evaluation.md) | Thí nghiệm watermark và recovery: cách chạy, cách đọc, giới hạn |
 | [`docs/07_ingestion.md`](docs/07_ingestion.md) | Xử lý reconnect, lỗi gửi và giới hạn đã biết |
 | [`docs/08_demo_script.md`](docs/08_demo_script.md) | Kịch bản demo bảo vệ và cách xử lý sự cố tại chỗ |
+| [`docs/09_defense_qa.md`](docs/09_defense_qa.md) | Trả lời 12 câu hỏi phản biện, kèm bằng chứng |
 
 ## Cấu trúc thư mục
 
@@ -177,6 +190,7 @@ docker-compose.yml  Kafka (KRaft), HDFS, Spark, producer
 config/             Cấu hình Hadoop cho container và cho client Spark
 src/producer/       SSE producer, cấu hình, Dockerfile
 src/streaming/      Raw sink lên HDFS, analytics query, báo cáo chất lượng và latency
+src/dashboard/      Streamlit Dashboard đọc topic analytics
 scripts/            Bootstrap, submit Spark job, thí nghiệm watermark và recovery
 tests/              Unit test, kiểm tra Spark, event mẫu
 docs/               Tài liệu

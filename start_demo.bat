@@ -62,11 +62,13 @@ podman exec -d spark sh -lc "pgrep -f '[a]nalytics_job' >/dev/null || sh /opt/ap
 
 echo.
 echo [5/5] Mo dashboard...
+start "" http://localhost:8501
 start "" http://localhost:8080
 
 echo.
 echo ================================================================
-echo  Dashboard : http://localhost:8080   (tu refresh 5 giay)
+echo  Dashboard : http://localhost:8501   (Streamlit)
+echo  Live feed : http://localhost:8080   (log tung luot sua)
 echo  NameNode  : http://localhost:9870
 echo  Spark UI  : http://localhost:4040
 echo.

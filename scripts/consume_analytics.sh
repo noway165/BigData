@@ -11,8 +11,9 @@ export MSYS_NO_PATHCONV MSYS2_ARG_CONV_EXCL
 
 DC="${DOCKER:-docker}"
 MAX="${1:-10}"
+[ $# -gt 0 ] && shift
 
 exec "$DC" exec -i kafka /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server kafka:9092 \
   --topic "${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}" \
-  --from-beginning --property print.key=true --max-messages "$MAX"
+  --from-beginning --property print.key=true --max-messages "$MAX" "$@"

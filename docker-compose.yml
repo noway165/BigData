@@ -2,6 +2,7 @@
 # Heap của mỗi service được giới hạn vì máy test chỉ có ~3,7 GB cho container.
 #   docker compose up -d                      # Kafka + HDFS + Spark
 #   docker compose --profile producer up -d    # thêm producer
+#   docker compose --profile dashboard up -d   # thêm Dashboard, http://localhost:8501
 # Podman: podman-compose với cùng file này.
 name: wikipedia-realtime-analytics
 
@@ -127,24 +128,45 @@ services:
         condition: service_healthy
     networks: [wiki-net]
 
+  # Dashboard Streamlit của Khoa: đọc topic analytics đã tổng hợp.
   dashboard:
-    # Dùng lại image của producer: nó đã có python 3.12 và confluent-kafka, nên
-    # dashboard không thêm image, dependency hay bước build nào.
     build:
       context: .
-      dockerfile: src/producer/Dockerfile
-    image: wikipedia-sse-producer
+      dockerfile: src/dashboard/Dockerfile
+    image: wikipedia-dashboard
     container_name: dashboard
     restart: unless-stopped
     profiles: ["dashboard"]
-    command: ["python", "-u", "/opt/app/src/dashboard/dashboard.py"]
     ports:
-      - "${DASHBOARD_PORT:-8080}:8080"
+      - "${DASHBOARD_PORT:-8501}:8501"
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_ANALYTICS_TOPIC: ${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}
       DASHBOARD_REFRESH_S: ${DASHBOARD_REFRESH_S:-5}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [wiki-net]
+
+  # Trang live feed: cùng profile `dashboard` nên một lệnh bật cả hai, khác cổng.
+  # Dùng lại image của producer (python 3.12 + confluent-kafka) nên không thêm
+  # image, dependency hay bước build nào.
+  livefeed:
+    build:
+      context: .
+      dockerfile: src/producer/Dockerfile
+    image: wikipedia-sse-producer
+    container_name: livefeed
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    command: ["python", "-u", "/opt/app/src/dashboard/dashboard.py"]
+    ports:
+      - "${LIVEFEED_PORT:-8080}:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_ANALYTICS_TOPIC: ${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}
       KAFKA_TOPIC: ${KAFKA_TOPIC:-wikipedia-recent-changes}
+      DASHBOARD_REFRESH_S: ${DASHBOARD_REFRESH_S:-5}
       DASHBOARD_LOG_WIKIS: ${DASHBOARD_LOG_WIKIS:-enwiki,viwiki}
       DASHBOARD_LOG_LINES: ${DASHBOARD_LOG_LINES:-60}
     volumes:

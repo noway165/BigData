@@ -9,7 +9,9 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 | Tải sẵn jar connector vào cache Ivy | Chạy một lần `docker compose up -d && sh scripts/bootstrap.sh`, rồi `docker exec spark sh /opt/app/scripts/spark_analytics_selfcheck.sh`. Volume `spark_ivy` giữ jar, buổi demo không cần mạng để tải. |
 | Pull sẵn image | `docker compose pull` |
 | Chạy trước thí nghiệm watermark và recovery | Giữ nguyên thư mục trong `outputs/experiment_results/` để trình bày |
-| Mở sẵn tab | Dashboard `http://localhost:8080`, NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040` |
+| Mở sẵn tab | Dashboard `http://localhost:8501`, Live feed `http://localhost:8080`, NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040` |
+| Build sẵn image Dashboard | `docker compose --profile dashboard build` (cần mạng để cài Streamlit) |
+| Lưu output analytics dự phòng | `sh scripts/capture_analytics.sh 5000` sau khi analytics đã chạy ~15 phút |
 | Chạy producer sớm 10–15 phút | Để HDFS đã có vài partition giờ và Kafka đã có dữ liệu |
 
 ## Trình tự demo
@@ -61,19 +63,33 @@ sh scripts/consume_analytics.sh 10
 
 Chỉ ra ba metric trên cùng một topic, biên window theo event time, và `threshold_edits` đi kèm bản ghi spike. Mở Spark UI tab Structured Streaming: ba query, mỗi query một checkpoint riêng.
 
-**5. Dashboard**
+**5. Dashboard** (Khoa trình bày)
 
 ```bash
 docker compose --profile dashboard up -d
 ```
 
-Mở `http://localhost:8080`. Trang tự refresh 5 giây, không dùng tài nguyên ngoài nên không cần mạng.
+Mở `http://localhost:8501`. Chỉ lần lượt:
 
-Chỉ ra: lượt sửa theo từng window 1 phút, top wiki của window mới nhất, tỷ lệ Bot/Human/Unknown của window 5 phút, và bảng trang vượt ngưỡng đột biến kèm ngưỡng đang áp dụng.
+1. Hàng chỉ số trên cùng: số event của window 1 phút mới nhất, so với phút trước. Nhấn mạnh window theo **event time** và chỉ phát khi đã đóng, nên số liệu chậm hơn đồng hồ khoảng 2–3 phút — đó là cái giá của watermark 1 phút.
+2. Biểu đồ số event mỗi phút, tách Bot / Human + Unknown; Top wiki (thường là `commonswiki`, `wikidatawiki`, `enwiki`).
+3. Donut Bot / Human / Unknown: mẫu số là tổng event của cùng window 5 phút, kể cả Unknown.
+4. Bảng cảnh báo spike: gọi là "hoạt động tăng đột biến", không phải edit war; chỉ cột *Do bot* và bật "Ẩn spike chủ yếu do bot" để thấy phần còn lại.
+5. Mở khung "Độ trễ phát kết quả và tình trạng dữ liệu": độ trễ `emitted_at − window_end`, số bản ghi lặp đã khử.
 
-Mỗi lần khởi động, dashboard dùng `group.id` mới và đọc từ `earliest`, nên trang có dữ liệu ngay từ phần còn trong retention 24 giờ thay vì phải chờ window đầu tiên đóng. Đây là lý do nên bật nó **trước** khi vào phòng, chứ không bật lúc đang trình bày.
+Sau bước 6 (recovery), quay lại khung này: số "bản ghi lặp đã khử" có thể tăng — đó là at-least-once của Kafka sink, Dashboard đã xử lý.
 
-Đây là bản tối thiểu để luôn có thứ hiển thị được; nếu bản Dashboard của Khoa chạy được thì trình bày bản đó, hợp đồng JSON giống nhau (mục 5 của [02_architecture.md](02_architecture.md)).
+Dự phòng nếu Kafka/Spark trục trặc: `ANALYTICS_SOURCE_FILE=outputs/experiment_results/analytics_capture.jsonl streamlit run src/dashboard/app.py` (file lưu trước bằng `sh scripts/capture_analytics.sh 5000`).
+
+**5b. Live feed (`http://localhost:8080`)**
+
+Cùng profile `dashboard`, nên lệnh ở bước 5 bật luôn cả hai. Trang này đọc **cả hai** topic: số liệu tổng hợp từ `wikipedia-analytics`, và log từng lượt sửa từ topic raw `wikipedia-recent-changes`.
+
+Chỉ ra: hàng chỉ số cỡ lớn, hai biểu đồ SVG, và **log trực tiếp** — mỗi dòng là một lượt sửa thật với giờ, người sửa (đã che: `Sim***`), loại thay đổi, tên bài và số byte thay đổi. Log lọc `enwiki` và `viwiki` để đọc kịp; toàn bộ luồng là khoảng 36 sự kiện mỗi giây.
+
+Trang không reload: nó gọi `/api/state` mỗi 2 giây nên không nháy và không nhảy về đầu trang. Không tải tài nguyên ngoài nào, mất mạng vẫn hiện.
+
+Log chỉ có sự kiện **từ lúc mở trang** (consumer raw đọc từ `latest`), nên bật sớm vài phút.
 
 **6. Crash recovery**
 
