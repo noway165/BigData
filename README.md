@@ -22,8 +22,10 @@ Raw Data Query                    Analytics Query
           v                              v
 HDFS / Parquet                  Kafka: wikipedia-analytics
                                          |
-                                         v
-                                 Dashboard HTTP (src/dashboard)
+                          +--------------+--------------+
+                          v                             v
+              Dashboard Streamlit            Live feed (src/dashboard/dashboard.py)
+              (app.py, :8501)                :8080, đọc thêm topic raw cho log
 ```
 
 ## Trạng thái
@@ -74,12 +76,6 @@ Chạy analytics (event-time window, watermark, ghi vào topic `wikipedia-analyt
 docker exec -d spark sh /opt/app/scripts/submit_analytics_job.sh
 ```
 
-Chạy dashboard (đọc topic `wikipedia-analytics`, mở http://localhost:8080):
-
-```bash
-docker compose --profile dashboard up -d
-```
-
 Kiểm tra Parquet trên HDFS:
 
 ```bash
@@ -92,13 +88,14 @@ Kiểm tra output analytics:
 sh scripts/consume_analytics.sh 10
 ```
 
-Mở Dashboard (đọc topic `wikipedia-analytics`), rồi vào `http://localhost:8501`:
+Bật hai trang hiển thị bằng một lệnh (cùng profile `dashboard`):
 
 ```bash
 docker compose --profile dashboard up -d
 ```
 
-Hoặc chạy trên máy host: `pip install -r src/dashboard/requirements.txt && streamlit run src/dashboard/app.py`.
+- **Dashboard Streamlit** (service `dashboard`, `http://localhost:8501`): chỉ đọc topic `wikipedia-analytics`. Hoặc chạy trên máy host: `pip install -r src/dashboard/requirements.txt && streamlit run src/dashboard/app.py`.
+- **Live feed** (service `livefeed`, `http://localhost:8080`, đổi cổng bằng `LIVEFEED_PORT`): trang HTTP riêng chạy từ `src/dashboard/dashboard.py`, không thay Dashboard Streamlit. Mọi khối số liệu đọc từ `wikipedia-analytics`; thêm một log từng lượt sửa đọc từ topic raw `wikipedia-recent-changes`. Log lọc `enwiki`, `viwiki`, chỉ `edit` và `new` (Chỉnh sửa bài, Thêm bài mới), che tên người dùng (`Printstream` thành `Pri***`), không hiện `comment`, và chỉ có event từ lúc `livefeed` khởi động vì consumer raw đọc từ `latest`. Trang tự cập nhật qua `/api/state` mỗi 2 giây, không reload.
 
 Xuất báo cáo chất lượng dữ liệu và latency:
 
@@ -187,11 +184,11 @@ Crash recovery: `kill -9` driver Spark, 60 giây sau khởi động lại cùng 
 ## Cấu trúc thư mục
 
 ```text
-docker-compose.yml  Kafka (KRaft), HDFS, Spark, producer
+docker-compose.yml  Kafka (KRaft), HDFS, Spark, producer, dashboard, livefeed
 config/             Cấu hình Hadoop cho container và cho client Spark
 src/producer/       SSE producer, cấu hình, Dockerfile
 src/streaming/      Raw sink lên HDFS, analytics query, báo cáo chất lượng và latency
-src/dashboard/      Streamlit Dashboard đọc topic analytics
+src/dashboard/      Streamlit Dashboard (app.py) và Live feed (dashboard.py)
 scripts/            Bootstrap, submit Spark job, thí nghiệm watermark và recovery
 tests/              Unit test, kiểm tra Spark, event mẫu
 docs/               Tài liệu
