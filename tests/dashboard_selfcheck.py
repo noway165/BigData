@@ -7,6 +7,7 @@ Chỉ dùng stdlib, nên chạy được trên máy host không cài confluent-k
 """
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "dashboard"))
@@ -29,6 +30,19 @@ def ratio(window, bot, human, unknown):
             "unknown_share": round(unknown / total, 4),
             "window_start": f"2026-11-08T10:{window}:00.000Z",
             "window_end": f"2026-11-08T10:{window + 5:02d}:00.000Z", "counted_types": "all"}
+
+
+def body_noscript(page):
+    """Chỉ phần <noscript> ở body. Khẳng định nội dung dựng sẵn phải nhắm vào đây: cùng một chuỗi
+    có thể nằm trong _JS, nên tìm trên cả trang thì khẳng định nào cũng đúng mà chẳng chứng minh gì."""
+    start = page.rindex("<noscript>") + len("<noscript>")
+    return page[start:page.index("</noscript>", start)]
+
+
+def head_noscript(page):
+    """<noscript> đầu tiên, nằm trong <head>: meta refresh và CSS giấu phần khung động."""
+    start = page.index("<noscript>") + len("<noscript>")
+    return page[start:page.index("</noscript>", start)]
 
 
 def spike(title, count=14, users=5):
@@ -73,13 +87,14 @@ assert state["last_window"] == "2026-11-08T10:15:00.000Z", state["last_window"]
 update_state(state, spike("<script>alert(1)</script>"))
 update_state(state, spike("Tranh cãi & bàn luận"))
 page = render_page(state, "12:00:00")
+fallback = body_noscript(page)
 assert "<script>alert(1)</script>" not in page
-assert "&lt;script&gt;" in page
-assert "Tranh cãi &amp; bàn luận" in page
+assert "&lt;script&gt;" in fallback
+assert "Tranh cãi &amp; bàn luận" in fallback
 
-# Nội dung thật sự xuất hiện trên trang.
-assert "enwiki" in page and "55" in page
-assert "Human" in page and "80" in page
+# Nội dung thật sự xuất hiện trong khối dựng sẵn ở server, không phải trong chuỗi của _JS.
+assert "enwiki" in fallback and "55" in fallback
+assert "Human" in fallback and "80" in fallback
 
 # window_start cũng đến từ Kafka nên cũng phải escape, không chỉ riêng title. Hai nhánh của
 # _hhmm: chuỗi có 'T' bị cắt 5 ký tự, chuỗi không có 'T' đi nguyên văn ra pill ở header.
@@ -97,11 +112,25 @@ assert "<script>alert(1)</script>" not in render_page(hostile2, "12:00:00")
 # Trang là shell + <noscript>: client lấy dữ liệu từ /api/state, không tải tài nguyên ngoài.
 assert "<noscript>" in page
 assert "/api/state" in page
-assert 'src="http' not in page and 'href="http' not in page
 
-# Trang rỗng vẫn render được và nói rõ vì sao chưa có gì.
+# Phòng bảo vệ có thể không có mạng, nên không được có BẤT KỲ tài nguyên ngoài nào. Dùng regex
+# để bắt cả nháy đơn, url(...) trong CSS, @import và fetch('http...'), không chỉ src=" / href=".
+EXTERNAL = re.compile(r"""(?:src|href)\s*=\s*['"]?https?:|url\(\s*['"]?https?:|@import""", re.I)
+assert not EXTERNAL.search(page), EXTERNAL.search(page).group(0)
+assert not EXTERNAL.search(render_page(new_state(), "12:00:00"))
+
+# Khi JavaScript tắt, phần khung động phải bị giấu, nếu không nó nằm cạnh khối dựng sẵn và
+# trang trông như hỏng. CSS giấu nằm trong <noscript> ở <head>.
+head_css = head_noscript(page)
+assert "display:none" in head_css, head_css
+for hook in ("#live", ".kpi", ".statusbar"):
+    assert hook in head_css, head_css
+    assert hook.lstrip("#.") in page  # và khung động thật sự mang các móc đó
+
+# Trang rỗng vẫn render được và nói rõ vì sao chưa có gì — trong khối dựng sẵn, không phải
+# trong một chuỗi nằm sẵn ở _JS.
 empty = render_page(new_state(), "12:00:00")
-assert "Chưa có window nào đóng" in empty
+assert "Chưa có window nào đóng" in body_noscript(empty)
 assert "<html" in empty
 
 # Che tên người dùng: tên thường giữ 3 ký tự đầu, IPv4/IPv6 giữ phần đầu, rỗng thì ẩn danh.
@@ -183,12 +212,20 @@ assert state["wiki_split"]["frwiki"]["human_edits"] == 0, state["wiki_split"]["f
 # recent_spikes phải đếm số bản ghi thật sự vượt ngưỡng. Dòng thật ~30 spike mỗi 30 giây, nên
 # 300 bản ghi là chuyện bình thường và KPI không được dừng ở bất kỳ cap nào của feed.
 burst = new_state()
+update_state(burst, edit("enwiki", 12, 1))  # cần một window timeline để có mốc "gần đây"
 for i in range(300):
     update_state(burst, spike(f"Trang {i}"))
 burst_json = state_json(burst, "12:00:00")
 assert burst_json["kpi"]["recent_spikes"] == 300, burst_json["kpi"]
 assert len(burst_json["spikes"]) == 12, len(burst_json["spikes"])  # feed vẫn chỉ hiện 12 cái mới nhất
 assert burst_json["spikes"][0]["title"] == "Trang 299", burst_json["spikes"][0]
+
+# Timeline rỗng thì chưa có mốc "gần đây" nào để so, nên KPI phải là 0 chứ không phải cộng sạch
+# mọi window đã tally — vài giây đầu sau khi khởi động lại đúng vào trường hợp này.
+blank = new_state()
+for i in range(5):
+    update_state(blank, spike(f"Trang {i}"))
+assert state_json(blank, "12:00:00")["kpi"]["recent_spikes"] == 0, state_json(blank, "12:00:00")["kpi"]
 
 # Chỉ spike từ cutoff trở đi mới được đếm; cutoff là window timeline cũ nhất trong 10 cái gần nhất.
 old = new_state()

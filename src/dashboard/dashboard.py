@@ -165,7 +165,9 @@ def state_json(state: dict, now: str) -> dict:
             "edits_per_minute": timeline[-1][1] if timeline else 0,
             "bot_share": bot.get("bot_share"),
             "active_wikis": len(state["edit_count"]),
-            "recent_spikes": sum(n for ws, n in state["spike_counts"].items() if ws >= cutoff),
+            # Chưa có window timeline nào thì chưa có mốc "gần đây"; cutoff rỗng sẽ gom sạch
+            # mọi window đã tally, nên vài giây đầu sau khởi động lại KPI sẽ phóng đại.
+            "recent_spikes": sum(n for ws, n in state["spike_counts"].items() if ws >= cutoff) if timeline else 0,
             "emit_lag_seconds": lag,
             "total_records": state["total"],
         },
@@ -277,7 +279,8 @@ def _noscript_blocks(state: dict) -> str:
 _CSS = """
 :root{
   --bg:#f9f9f7; --card:#fcfcfb; --line:#e1e0d9; --axis:#c3c2b7; --track:#eceae4;
-  --fg:#0b0b0b; --dim:#52514e; --muted:#898781;
+  /* --muted đi vào chữ nhãn trục cỡ nhỏ, nên phải đạt AA: #898781 chỉ được 3.5:1 trên nền sáng */
+  --fg:#0b0b0b; --dim:#52514e; --muted:#6b6a65;
   --accent:#2a78d6; --human:#2a78d6; --bot:#eb6834; --unknown:#898781;
   --good:#0ca30c; --warn:#a66300; --crit:#d03b3b; --up:#006300; --down:#c23434;
 }
@@ -572,28 +575,44 @@ function statusBar(d,online){
         online?'cập nhật '+st.now+' UTC':'mất kết nối /api/state');
 }
 
-function render(d){
-  kpiRow(d.kpi);
-  editsChart(d.timeline);
-  wikiSplit(d.wikis);
-  botTrend(d.bot_history);
-  spikeFeed(d.spikes);
-  liveLog(d.log);
-  statusBar(d,true);
+function headerPills(d){
   g('pill-total').textContent=num(d.kpi.total_records)+' bản ghi';
   g('pill-window').textContent='window mới nhất '+hhmm(d.status.last_window)+' UTC';
 }
 
-var latest=null;
+// Mỗi khối tự chịu lỗi của mình: một bản ghi dị dạng trong KPI không được kéo theo cả log và
+// thanh trạng thái. Nhờ vậy render() không bao giờ ném, nên lỗi vẽ không bị báo nhầm là mất mạng.
+function safe(name,fn,arg){
+  try{ fn(arg) }catch(err){ console.error('[dashboard] khối '+name+' lỗi:',err) }
+}
+function render(d){
+  safe('KPI',kpiRow,d.kpi);
+  safe('lượt sửa',editsChart,d.timeline);
+  safe('top wiki',wikiSplit,d.wikis);
+  safe('tỉ lệ bot',botTrend,d.bot_history);
+  safe('spike',spikeFeed,d.spikes);
+  safe('log',liveLog,d.log);
+  safe('trạng thái',function(x){statusBar(x,true)},d);
+  safe('header',headerPills,d);
+}
+
+var latest=null, busy=false;
 async function tick(){
+  if(busy)return;  // một poll chậm trả về sau poll mới hơn sẽ vẽ đè dữ liệu cũ lên dữ liệu mới
+  busy=true;
   try{
     var res=await fetch('/api/state',{cache:'no-store'});
-    if(!res.ok)throw new Error(res.status);
-    latest=await res.json();
-    render(latest);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var data=await res.json();
+    latest=data;
+    render(data);
   }catch(err){
-    // Giữ nguyên số liệu cũ trên màn hình, chỉ đổi chặng cuối sang đỏ: màn chiếu không được trắng.
-    if(latest)statusBar(latest,false);
+    // Chỉ tới được đây khi fetch/parse hỏng. Giữ nguyên số liệu cũ trên màn hình và đổi chặng
+    // cuối sang đỏ: màn chiếu không được trắng giữa buổi bảo vệ.
+    console.error('[dashboard] không lấy được /api/state:',err);
+    if(latest)safe('trạng thái',function(x){statusBar(x,false)},latest);
+  }finally{
+    busy=false;
   }
 }
 tick();
@@ -620,7 +639,8 @@ def render_page(state: dict, now: str) -> str:
     return f"""<!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<noscript><meta http-equiv="refresh" content="{REFRESH_S}"></noscript>
+<noscript><meta http-equiv="refresh" content="{REFRESH_S}">
+<style>#live,.kpi,.statusbar{{display:none}}</style></noscript>
 <title>Wikipedia Realtime Analytics</title>
 <style>{_CSS}</style></head><body>
 <header>
@@ -631,7 +651,7 @@ def render_page(state: dict, now: str) -> str:
   <span class="pill">tự cập nhật 2s · {_esc(now)} UTC</span>
 </header>
 <div class="kpi">{tiles}</div>
-<div class="grid">
+<div class="grid" id="live">
   <div class="card"><h2>Lượt sửa mỗi phút · {TIMELINE_WINDOWS} window gần nhất</h2>
     <div id="chart-edits"><p class="empty">Đang tải…</p></div></div>
   <div class="card half"><h2>Top wiki · window 1 phút mới nhất</h2>
