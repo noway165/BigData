@@ -29,6 +29,9 @@ GROUP_ID = os.environ.get("DASHBOARD_GROUP_ID", "dashboard-" + uuid.uuid4().hex[
 REFRESH_S = int(os.environ.get("DASHBOARD_REFRESH_S", "5"))
 TIMELINE_WINDOWS = int(os.environ.get("DASHBOARD_TIMELINE_WINDOWS", "20"))
 TOP_WIKIS = int(os.environ.get("DASHBOARD_TOP_WIKIS", "12"))
+RAW_TOPIC = os.environ.get("KAFKA_TOPIC", "wikipedia-recent-changes")
+LOG_WIKIS = frozenset(w.strip() for w in os.environ.get("DASHBOARD_LOG_WIKIS", "enwiki,viwiki").split(",") if w.strip())
+LOG_KINDS = frozenset({"edit", "new"})
 LOG_LINES = int(os.environ.get("DASHBOARD_LOG_LINES", "60"))
 BOT_HISTORY_WINDOWS = int(os.environ.get("DASHBOARD_BOT_HISTORY_WINDOWS", "12"))
 METRICS = ("edit_count", "bot_ratio", "activity_spike")
@@ -76,7 +79,7 @@ def update_state(state: dict, rec: dict) -> dict:
             state["edit_count"][wiki] = rec
             count, bots = int(rec.get("edit_count") or 0), int(rec.get("bot_edits") or 0)
             state["wiki_split"][wiki] = {"edit_count": count, "bot_edits": bots,
-                                         "human_edits": count - bots, "window_start": window_start}
+                                         "human_edits": max(0, count - bots), "window_start": window_start}
         timeline = state["timeline"]
         timeline[window_start] = timeline.get(window_start, 0) + int(rec.get("edit_count") or 0)
         _trim(timeline, TIMELINE_WINDOWS)
@@ -127,6 +130,43 @@ def log_entry(event: dict, wikis: frozenset, kinds: frozenset):
         "kind": event["type"],
         "title": event.get("title") or "",
         "delta": None if new_len is None else new_len - (length.get("old") or 0),
+    }
+
+
+def _parse_ts(iso):
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except (AttributeError, ValueError):
+        return None
+
+
+def state_json(state: dict, now: str) -> dict:
+    """View model cho /api/state. Chỉ trả list/dict thuần để json.dumps được; gọi trong `with lock`."""
+    timeline = sorted(state["timeline"].items())
+    wikis = sorted(state["wiki_split"].items(), key=lambda kv: kv[1]["edit_count"], reverse=True)[:TOP_WIKIS]
+    cutoff = timeline[-10:][0][0] if timeline else ""
+    newest = max(list(state["edit_count"].values()) + ([state["bot_ratio"]] if state["bot_ratio"] else []),
+                 key=lambda r: r.get("window_end") or "", default=None)
+    lag = None
+    emitted, ended = _parse_ts((newest or {}).get("emitted_at")), _parse_ts((newest or {}).get("window_end"))
+    if emitted and ended:
+        lag = round((emitted - ended).total_seconds(), 1)
+    bot = state["bot_ratio"] or {}
+    return {
+        "kpi": {
+            "edits_per_minute": timeline[-1][1] if timeline else 0,
+            "bot_share": bot.get("bot_share"),
+            "active_wikis": len(state["edit_count"]),
+            "recent_spikes": sum(1 for r in state["spikes"] if (r.get("window_start") or "") >= cutoff),
+            "emit_lag_seconds": lag,
+            "total_records": state["total"],
+        },
+        "timeline": [{"window_start": ws, "edit_count": v} for ws, v in timeline],
+        "wikis": [{"wiki": w, **v} for w, v in wikis],
+        "bot_history": [dict(r) for _, r in sorted(state["bot_history"].items())],
+        "spikes": [dict(r) for r in reversed(state["spikes"])],
+        "log": [dict(e) for e in state["log"]],
+        "status": {"now": now, "last_window": state["last_window"], "ignored": state["ignored"]},
     }
 
 
@@ -293,19 +333,50 @@ def consume_forever(state: dict, lock: threading.Lock) -> None:
             update_state(state, record)
 
 
+def consume_raw_forever(state: dict, lock: threading.Lock) -> None:
+    """Đọc topic raw, lọc ngay tại đây (~36 event/s vào, 2-3 giữ lại) rồi đẩy vào log."""
+    from confluent_kafka import Consumer  # import muộn như consume_forever
+
+    consumer = Consumer({
+        "bootstrap.servers": BOOTSTRAP,
+        "group.id": GROUP_ID + "-raw",
+        "auto.offset.reset": "latest",
+        "enable.auto.commit": False,
+    })
+    consumer.subscribe([RAW_TOPIC])
+    print(f"[dashboard] đọc {RAW_TOPIC} cho log, wiki {sorted(LOG_WIKIS)}", flush=True)
+    while True:
+        message = consumer.poll(1.0)
+        if message is None:
+            continue
+        if message.error():
+            print(f"[dashboard] lỗi Kafka (raw): {message.error()}", flush=True)
+            continue
+        try:  # phong bì rồi tới raw_value (chuỗi JSON); lỗi ở bước nào cũng chỉ bỏ message đó
+            entry = log_entry(json.loads(json.loads(message.value())["raw_value"]), LOG_WIKIS, LOG_KINDS)
+        except (ValueError, TypeError, KeyError, AttributeError):
+            continue
+        if entry is not None:
+            with lock:
+                update_log(state, entry)
+
+
 def main() -> None:
     state = new_state()
     lock = threading.Lock()
     threading.Thread(target=consume_forever, args=(state, lock), daemon=True).start()
+    threading.Thread(target=consume_raw_forever, args=(state, lock), daemon=True).start()
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
             now = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            api = self.path.split("?", 1)[0] == "/api/state"
+            # Snapshot dựng trong lock (consumer đang ghi các dict này), serialize ngoài lock.
             with lock:
-                page = render_page(state, now)
-            body = page.encode("utf-8")
+                page = state_json(state, now) if api else render_page(state, now)
+            body = (json.dumps(page) if api else page).encode("utf-8")
             self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Type", "application/json" if api else "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)

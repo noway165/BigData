@@ -3,14 +3,16 @@
 
 Chạy:  python tests/dashboard_selfcheck.py
 Chỉ dùng stdlib, nên chạy được trên máy host không cài confluent-kafka
-(`confluent_kafka` chỉ được import bên trong consume_forever).
+(`confluent_kafka` chỉ được import bên trong các hàm consumer).
 """
+import json
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "dashboard"))
 
-from dashboard import log_entry, mask_user, new_state, render_page, update_log, update_state  # noqa: E402
+from dashboard import (LOG_LINES, log_entry, mask_user, new_state, render_page, state_json,  # noqa: E402
+                       update_log, update_state)
 
 
 def edit(wiki, window, count, bots=0):
@@ -147,6 +149,27 @@ update_log(state, {"time": "16:00:01", "wiki": "enwiki", "user": "A***", "bot": 
 update_log(state, {"time": "16:00:02", "wiki": "viwiki", "user": "B***", "bot": True,
                    "kind": "new", "title": "Second", "delta": None})
 assert [e["title"] for e in state["log"]] == ["Second", "First"]
-assert state["log"].maxlen == 60
+assert state["log"].maxlen == LOG_LINES  # không gắn cứng 60: DASHBOARD_LOG_LINES có thể đổi nó
+
+# Đẩy quá giới hạn thì dòng cũ nhất bị loại, dòng mới nhất vẫn đứng đầu.
+capped = new_state()
+for i in range(LOG_LINES + 1):
+    update_log(capped, {"title": f"t{i}"})
+assert len(capped["log"]) == LOG_LINES
+assert capped["log"][0]["title"] == f"t{LOG_LINES}" and "t0" not in [e["title"] for e in capped["log"]]
+
+# human_edits không âm dù bản ghi báo bot_edits > edit_count.
+update_state(state, edit("frwiki", 11, 5, bots=9))
+assert state["wiki_split"]["frwiki"]["human_edits"] == 0, state["wiki_split"]["frwiki"]
+
+# state_json: serialize được (deque thì không), đủ khóa, không lộ comment/tên gốc.
+payload = state_json(state, "12:00:00")
+assert set(payload) == {"kpi", "timeline", "wikis", "bot_history", "spikes", "log", "status"}
+assert json.dumps(payload)
+assert payload["kpi"]["total_records"] == state["total"]
+assert payload["log"][0]["title"] == "Second"
+assert all("comment" not in e for e in payload["log"])
+assert payload["status"]["last_window"] == state["last_window"]
+assert state_json(new_state(), "12:00:00")["kpi"]["emit_lag_seconds"] is None  # state rỗng không nổ
 
 print("DASHBOARD SELFCHECK OK")
