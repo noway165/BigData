@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "dashboard"))
 
-from dashboard import log_entry, mask_user, new_state, render_page, update_state  # noqa: E402
+from dashboard import log_entry, mask_user, new_state, render_page, update_log, update_state  # noqa: E402
 
 
 def edit(wiki, window, count, bots=0):
@@ -89,6 +89,8 @@ assert mask_user("Printstream") == "Pri***"
 assert mask_user("Ab") == "A***"
 assert mask_user("171.224.3.9") == "171.224.*.*"
 assert mask_user("2001:db8:85a3::8a2e") == "2001:db8:*"
+assert mask_user("Abc") == "A***"  # đúng 3 ký tự thì không được lộ nguyên tên
+assert mask_user("User:Foo") == "Use***"  # một dấu ':' không phải IPv6
 assert mask_user(None) == "ẩn danh"
 assert mask_user("") == "ẩn danh"
 
@@ -119,5 +121,32 @@ assert log_entry(raw(length={}), WIKIS, KINDS)["delta"] is None
 assert log_entry(raw(bot=True), WIKIS, KINDS)["bot"] is True
 assert "comment" not in log_entry(raw(comment="xin chao"), WIKIS, KINDS)
 assert log_entry(raw(title="A & <b>"), WIKIS, KINDS)["title"] == "A & <b>"  # escape thuộc về renderer
+assert "ABlitzz" not in str(entry)  # tên gốc không lọt vào entry
+
+# wiki_split: window mới nhất theo wiki, human_edits suy ra, window cũ đến muộn bị bỏ.
+state = new_state()
+update_state(state, edit("enwiki", 11, 55, bots=20))
+assert state["wiki_split"]["enwiki"] == {"edit_count": 55, "bot_edits": 20, "human_edits": 35,
+                                         "window_start": "2026-11-08T10:11:00.000Z"}
+update_state(state, edit("enwiki", 10, 999, bots=1))
+assert state["wiki_split"]["enwiki"]["edit_count"] == 55, state["wiki_split"]
+
+# bot_history: mỗi window một bản ghi mới nhất, cắt còn BOT_HISTORY_WINDOWS window lớn nhất.
+update_state(state, ratio(10, 30, 60, 10))
+update_state(state, ratio(15, 10, 80, 10))
+assert sorted(state["bot_history"]) == ["2026-11-08T10:10:00.000Z", "2026-11-08T10:15:00.000Z"]
+update_state(state, ratio(10, 1, 1, 1))
+assert state["bot_history"]["2026-11-08T10:10:00.000Z"]["bot_count"] == 1
+for minute in range(20, 40):
+    update_state(state, ratio(minute, 1, 1, 1))
+assert len(state["bot_history"]) == 12 and "2026-11-08T10:10:00.000Z" not in state["bot_history"]
+
+# log: mới nhất đứng đầu, giới hạn LOG_LINES.
+update_log(state, {"time": "16:00:01", "wiki": "enwiki", "user": "A***", "bot": False,
+                   "kind": "edit", "title": "First", "delta": 10})
+update_log(state, {"time": "16:00:02", "wiki": "viwiki", "user": "B***", "bot": True,
+                   "kind": "new", "title": "Second", "delta": None})
+assert [e["title"] for e in state["log"]] == ["Second", "First"]
+assert state["log"].maxlen == 60
 
 print("DASHBOARD SELFCHECK OK")

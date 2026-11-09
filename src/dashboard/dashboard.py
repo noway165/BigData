@@ -29,6 +29,8 @@ GROUP_ID = os.environ.get("DASHBOARD_GROUP_ID", "dashboard-" + uuid.uuid4().hex[
 REFRESH_S = int(os.environ.get("DASHBOARD_REFRESH_S", "5"))
 TIMELINE_WINDOWS = int(os.environ.get("DASHBOARD_TIMELINE_WINDOWS", "20"))
 TOP_WIKIS = int(os.environ.get("DASHBOARD_TOP_WIKIS", "12"))
+LOG_LINES = int(os.environ.get("DASHBOARD_LOG_LINES", "60"))
+BOT_HISTORY_WINDOWS = int(os.environ.get("DASHBOARD_BOT_HISTORY_WINDOWS", "12"))
 METRICS = ("edit_count", "bot_ratio", "activity_spike")
 
 
@@ -37,6 +39,9 @@ def new_state() -> dict:
         "edit_count": {},      # wiki -> bản ghi của window mới nhất
         "timeline": {},        # window_start -> tổng lượt sửa mọi wiki
         "bot_ratio": None,     # bản ghi window mới nhất
+        "wiki_split": {},      # wiki -> edit_count/bot_edits/human_edits của window mới nhất
+        "bot_history": {},     # window_start -> bản ghi bot_ratio mới nhất của window đó
+        "log": deque(maxlen=LOG_LINES),  # dòng log, mới nhất đứng đầu
         "spikes": deque(maxlen=30),
         "total": 0,
         "ignored": 0,
@@ -69,6 +74,9 @@ def update_state(state: dict, rec: dict) -> dict:
         # bảo đảm thứ tự giữa các partition.
         if current is None or window_start >= (current.get("window_start") or ""):
             state["edit_count"][wiki] = rec
+            count, bots = int(rec.get("edit_count") or 0), int(rec.get("bot_edits") or 0)
+            state["wiki_split"][wiki] = {"edit_count": count, "bot_edits": bots,
+                                         "human_edits": count - bots, "window_start": window_start}
         timeline = state["timeline"]
         timeline[window_start] = timeline.get(window_start, 0) + int(rec.get("edit_count") or 0)
         _trim(timeline, TIMELINE_WINDOWS)
@@ -76,8 +84,16 @@ def update_state(state: dict, rec: dict) -> dict:
         current = state["bot_ratio"]
         if current is None or window_start >= (current.get("window_start") or ""):
             state["bot_ratio"] = rec
+        state["bot_history"][window_start] = rec
+        _trim(state["bot_history"], BOT_HISTORY_WINDOWS)
     else:
         state["spikes"].append(rec)
+    return state
+
+
+def update_log(state: dict, entry: dict) -> dict:
+    """Đẩy một dòng log (đã qua log_entry) lên đầu; deque tự bỏ dòng cũ nhất khi đầy."""
+    state["log"].appendleft(entry)
     return state
 
 
@@ -88,9 +104,9 @@ def mask_user(name) -> str:
     parts = name.split(".")
     if len(parts) == 4 and all(p.isdigit() for p in parts):
         return f"{parts[0]}.{parts[1]}.*.*"
-    if ":" in name:
+    if name.count(":") >= 2:  # IPv6 mới có từ 2 dấu ':'; "User:Foo" thì không
         return ":".join(name.split(":")[:2]) + ":*"
-    return name[:3] + "***" if len(name) >= 3 else name[:1] + "***"
+    return name[:3] + "***" if len(name) > 3 else name[:1] + "***"
 
 
 def log_entry(event: dict, wikis: frozenset, kinds: frozenset):
