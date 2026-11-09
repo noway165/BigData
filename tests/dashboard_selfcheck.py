@@ -12,8 +12,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "dashboard"))
 
-from dashboard import (LOG_LINES, log_entry, mask_user, new_state, render_page, state_json,  # noqa: E402
-                       update_log, update_state)
+from dashboard import (DISPLAY_UTC_OFFSET, LOG_LINES, _hhmm, log_entry, mask_user,  # noqa: E402
+                       new_state, render_page, state_json, update_log, update_state)
 
 
 def edit(wiki, window, count, bots=0):
@@ -34,9 +34,13 @@ def ratio(window, bot, human, unknown):
 
 def body_noscript(page):
     """Chỉ phần <noscript> ở body. Khẳng định nội dung dựng sẵn phải nhắm vào đây: cùng một chuỗi
-    có thể nằm trong _JS, nên tìm trên cả trang thì khẳng định nào cũng đúng mà chẳng chứng minh gì."""
-    start = page.rindex("<noscript>") + len("<noscript>")
-    return page[start:page.index("</noscript>", start)]
+    có thể nằm trong _JS, nên tìm trên cả trang thì khẳng định nào cũng đúng mà chẳng chứng minh gì.
+
+    Cắt bỏ khối <script> trước đã: một dòng chú thích trong _JS cũng có thể chứa chữ "<noscript>".
+    """
+    shell = page[:page.rindex("<script>")]
+    start = shell.rindex("<noscript>") + len("<noscript>")
+    return shell[start:shell.index("</noscript>", start)]
 
 
 def head_noscript(page):
@@ -260,5 +264,36 @@ assert "Printstream" not in served
 assert "toi vua sua lai cai bang" not in served
 
 assert state_json(new_state(), "12:00:00")["kpi"]["emit_lag_seconds"] is None  # state rỗng không nổ
+
+# --- Giờ hiển thị là giờ VN, dữ liệu lưu vẫn là UTC ---------------------------------------------
+assert DISPLAY_UTC_OFFSET == 7, DISPLAY_UTC_OFFSET
+
+# Cộng offset vào phần giờ, có xử lý tràn qua nửa đêm.
+assert _hhmm("2026-11-09T09:15:00.000Z") == "16:15"   # không tràn
+assert _hhmm("2026-11-09T18:30:00.000Z") == "01:30"   # tràn: phải là 01:30 chứ không phải 25:30
+assert _hhmm("2026-11-09T17:00:00.000Z") == "00:00"   # đúng nửa đêm
+assert _hhmm("2026-11-09T23:59:00.000Z") == "06:59"
+assert _hhmm("") == "—" and _hhmm("rác") == "rác"     # chuỗi lạ vẫn đi qua nguyên vẹn
+
+# Dữ liệu phục vụ KHÔNG được dịch: mọi so sánh thứ tự, _trim, last_window và cutoff đều dựa trên
+# chuỗi ISO UTC này, và emit_lag_seconds tính số học ngay cạnh chúng.
+tz_state = new_state()
+update_state(tz_state, edit("enwiki", 18, 5))
+tz_payload = state_json(tz_state, "18:30:00")
+assert tz_payload["timeline"][0]["window_start"] == "2026-11-08T10:18:00.000Z", tz_payload["timeline"]
+assert tz_payload["wikis"][0]["window_start"] == "2026-11-08T10:18:00.000Z", tz_payload["wikis"]
+assert tz_payload["status"]["last_window"] == "2026-11-08T10:18:00.000Z", tz_payload["status"]
+assert tz_payload["status"]["now"] == "18:30:00", tz_payload["status"]
+
+# Trang thì ngược lại: chỉ hiện giờ VN và không còn nhãn UTC ở đâu cả.
+tz_page = render_page(tz_state, "18:30:00")
+assert "17:18" in body_noscript(tz_page), body_noscript(tz_page)  # 10:18 UTC + 7
+assert "01:30:00" in tz_page                                      # 18:30:00 UTC + 7, tràn nửa đêm
+assert "giờ VN" in tz_page
+assert "UTC" not in tz_page, [l for l in tz_page.splitlines() if "UTC" in l]
+
+# Hai đường render phải dùng chung một offset, nên client nhận nó từ server chứ không tự đoán
+# theo múi giờ của trình duyệt (container chạy UTC thì hai bên sẽ lệch nhau).
+assert f"TZ_OFFSET={DISPLAY_UTC_OFFSET}" in tz_page
 
 print("DASHBOARD SELFCHECK OK")

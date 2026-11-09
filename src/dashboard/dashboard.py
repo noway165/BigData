@@ -34,6 +34,11 @@ LOG_WIKIS = frozenset(w.strip() for w in os.environ.get("DASHBOARD_LOG_WIKIS", "
 LOG_KINDS = frozenset({"edit", "new"})
 LOG_LINES = int(os.environ.get("DASHBOARD_LOG_LINES", "60"))
 BOT_HISTORY_WINDOWS = int(os.environ.get("DASHBOARD_BOT_HISTORY_WINDOWS", "12"))
+# Dữ liệu (window_start/window_end, last_window, cutoff, emit_lag_seconds) luôn là UTC và không
+# bao giờ bị dịch: mọi so sánh thứ tự và số học đều dựa vào đó. Offset này chỉ dùng lúc hiển thị,
+# và client nhận nó từ server để hai đường render không lệch nhau.
+DISPLAY_UTC_OFFSET = int(os.environ.get("DISPLAY_UTC_OFFSET", "7"))
+DISPLAY_TZ_LABEL = "giờ VN"
 SPIKE_FEED = 12            # số spike mới nhất hiện trên trang
 SPIKE_COUNT_WINDOWS = 120  # số window giữ tally spike; window spike trượt 30 giây nên đủ cho 1 giờ
 METRICS = ("edit_count", "bot_ratio", "activity_spike")
@@ -180,14 +185,26 @@ def state_json(state: dict, now: str) -> dict:
     }
 
 
+def _local(clock: str) -> str:
+    """'18:30' hoặc '18:30:00' theo UTC -> cùng định dạng theo giờ hiển thị.
+
+    Chỉ cộng vào phần giờ rồi lấy dư 24, nên 18:30 + 7 ra 01:30 chứ không phải 25:30. Chuỗi
+    không phải giờ thì trả nguyên văn để nhánh escape ở trên vẫn xử lý được.
+    """
+    parts = clock.split(":")
+    if len(parts) < 2 or not parts[0].isdigit():
+        return clock
+    return ":".join([f"{(int(parts[0]) + DISPLAY_UTC_OFFSET) % 24:02d}"] + parts[1:])
+
+
 def _hhmm(iso: str) -> str:
-    """'2026-11-07T18:48:00.000Z' -> '18:48'. Chuỗi lạ thì trả nguyên văn.
+    """'2026-11-07T18:48:00.000Z' (UTC) -> '01:48' theo giờ hiển thị. Chuỗi lạ thì trả nguyên văn.
 
     Escape luôn: window_start đến từ Kafka và mọi chỗ gọi hàm này đều nhúng thẳng vào HTML.
     """
     if not iso or "T" not in iso:
         return _esc(iso) if iso else "—"
-    return _esc(iso.split("T", 1)[1][:5])
+    return _esc(_local(iso.split("T", 1)[1][:5]))
 
 
 def _bar(ratio: float, color: str) -> str:
@@ -245,7 +262,7 @@ def _noscript_blocks(state: dict) -> str:
             f'({(c / total * 100) if total else 0:.1f}%)</li>' for label, c, color in parts)
         bot_block = (f'<div class="stack">{segs}</div><ul class="legend">{legend}</ul>'
                      f'<p class="dim">Window {_hhmm(bot.get("window_start") or "")}'
-                     f'–{_hhmm(bot.get("window_end") or "")} UTC · {total} event</p>')
+                     f'–{_hhmm(bot.get("window_end") or "")} {DISPLAY_TZ_LABEL} · {total} event</p>')
     else:
         bot_block = "<p class='empty'>Chưa có window bot_ratio nào đóng (tumbling 5 phút, nên chờ lâu nhất).</p>"
 
@@ -398,7 +415,15 @@ var GLYPH={good:'\\u25cf',warn:'\\u25b2',crit:'\\u2716'};
 function g(id){return document.getElementById(id)}
 function num(v){return v==null?'\\u2014':Number(v).toLocaleString('vi-VN')}
 function pct(v){return v==null?'\\u2014':(v*100).toFixed(1)+'%'}
-function hhmm(iso){var i=(iso||'').indexOf('T');return i<0?(iso||'\\u2014'):iso.slice(i+1,i+6)}
+// TZ_OFFSET và TZ_LABEL do server nhúng vào trang. Cố ý KHÔNG dùng múi giờ của trình duyệt:
+// container chạy theo giờ gốc (offset 0), nên đường dựng sẵn ở server và đường client sẽ lệch nhau.
+function local(clock){
+  var p=String(clock==null?'':clock).split(':');
+  if(p.length<2||!/^\\d+$/.test(p[0]))return clock;
+  p[0]=('0'+((Number(p[0])+TZ_OFFSET)%24)).slice(-2);
+  return p.join(':');
+}
+function hhmm(iso){var i=(iso||'').indexOf('T');return i<0?(iso||'\\u2014'):local(iso.slice(i+1,i+6))}
 function el(tag,cls,text){var e=document.createElement(tag);
   if(cls)e.className=cls; if(text!=null)e.textContent=text; return e}
 function sv(tag,attrs){var e=document.createElementNS(NS,tag);
@@ -435,7 +460,7 @@ function editsChart(rows){
     var h=Math.max(2,(r.edit_count||0)/peak*ih);
     var bar=sv('rect',{x:(L+i*bw+1).toFixed(1),y:(T+ih-h).toFixed(1),rx:3,
                        width:Math.max(1,bw-2).toFixed(1),height:h.toFixed(1),fill:'var(--accent)'});
-    svg.appendChild(tip(bar,hhmm(r.window_start)+' UTC · '+num(r.edit_count)+' lượt sửa'));
+    svg.appendChild(tip(bar,hhmm(r.window_start)+' '+TZ_LABEL+' · '+num(r.edit_count)+' lượt sửa'));
     if(i===rows.length-1||i%4===0){
       var t=sv('text',{x:(L+i*bw+bw/2).toFixed(1),y:H-12,'text-anchor':'middle','class':'tick'});
       t.textContent=hhmm(r.window_start); svg.appendChild(t);
@@ -497,7 +522,7 @@ function botTrend(rows){
   rows.forEach(function(r,i){
     var c=sv('circle',{cx:px(i).toFixed(1),cy:py(r.bot_share).toFixed(1),r:4,
                        fill:'var(--bot)',stroke:'var(--card)','stroke-width':1.5});
-    svg.appendChild(tip(c,hhmm(r.window_start)+'\\u2013'+hhmm(r.window_end)+' UTC · bot '
+    svg.appendChild(tip(c,hhmm(r.window_start)+'\\u2013'+hhmm(r.window_end)+' '+TZ_LABEL+' · bot '
                         +pct(r.bot_share)+' / '+num(r.total_events)+' event'));
     if(i===rows.length-1||i%3===0){
       var t=sv('text',{x:px(i).toFixed(1),y:H-8,'text-anchor':'middle','class':'tick'});
@@ -532,7 +557,7 @@ function liveLog(rows){
   if(!rows.length)frag.appendChild(el('p','empty','Chưa có event nào qua bộ lọc wiki.'));
   rows.slice(0,14).forEach(function(e){
     var row=el('div','log-row');
-    row.appendChild(el('span','t',e.time));
+    row.appendChild(el('span','t',local(e.time)));
     row.appendChild(el('span','k',e.wiki));
     var who=el('span','hide-s');
     who.appendChild(el('span',null,e.user));
@@ -564,7 +589,7 @@ function stage(id,state,text){
 function statusBar(d,online){
   var st=d.status, k=d.kpi, age=d.log.length?gap(d.log[0].time,st.now):null;
   stage('st-source',online&&age!=null&&age<=30?'good':'warn',
-        d.log.length?'event mới nhất '+d.log[0].time+' UTC':'chưa nhận event nào');
+        d.log.length?'event mới nhất '+local(d.log[0].time)+' '+TZ_LABEL:'chưa nhận event nào');
   stage('st-raw',d.log.length?'good':'warn',num(d.log.length)+' dòng trong bộ đệm log');
   stage('st-spark',k.emit_lag_seconds==null?'warn':k.emit_lag_seconds<=120?'good':'warn',
         k.emit_lag_seconds==null?'chưa có window nào đóng'
@@ -572,12 +597,12 @@ function statusBar(d,online){
   stage('st-analytics',k.total_records?'good':'warn',
         num(k.total_records)+' bản ghi · bỏ '+num(st.ignored));
   stage('st-page',online?'good':'crit',
-        online?'cập nhật '+st.now+' UTC':'mất kết nối /api/state');
+        online?'cập nhật '+local(st.now)+' '+TZ_LABEL:'mất kết nối /api/state');
 }
 
 function headerPills(d){
   g('pill-total').textContent=num(d.kpi.total_records)+' bản ghi';
-  g('pill-window').textContent='window mới nhất '+hhmm(d.status.last_window)+' UTC';
+  g('pill-window').textContent='window mới nhất '+hhmm(d.status.last_window)+' '+TZ_LABEL;
 }
 
 // Mỗi khối tự chịu lỗi của mình: một bản ghi dị dạng trong KPI không được kéo theo cả log và
@@ -653,8 +678,8 @@ def render_page(state: dict, now: str) -> str:
   <h1>Wikipedia Realtime Analytics</h1>
   <span class="pill">topic {_esc(TOPIC)}</span>
   <span class="pill" id="pill-total">{state['total']} bản ghi</span>
-  <span class="pill" id="pill-window">window mới nhất {_hhmm(state['last_window'])} UTC</span>
-  <span class="pill">tự cập nhật 2s · {_esc(now)} UTC</span>
+  <span class="pill" id="pill-window">window mới nhất {_hhmm(state['last_window'])} {DISPLAY_TZ_LABEL}</span>
+  <span class="pill">tự cập nhật 2s · {_esc(_local(now))} {DISPLAY_TZ_LABEL}</span>
 </header>
 <div class="kpi">{tiles}</div>
 <div class="grid" id="live">
@@ -680,7 +705,7 @@ def render_page(state: dict, now: str) -> str:
   <p class="empty">JavaScript đang tắt: trang tự refresh {REFRESH_S}s và chỉ hiện các khối dựng ở server.</p>
   {_noscript_blocks(state)}
 </noscript>
-<script>{_JS}</script>
+<script>var TZ_OFFSET={DISPLAY_UTC_OFFSET},TZ_LABEL={json.dumps(DISPLAY_TZ_LABEL)};{_JS}</script>
 </body></html>"""
 
 
