@@ -18,7 +18,7 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 
 **1. Khởi động hạ tầng**
 
-Nhanh nhất là nhấp đúp `start_demo.bat` ở thư mục gốc: nó làm hết bước 1, 2, 4 và mở dashboard.
+Nhanh nhất là nhấp đúp `demo.bat` ở thư mục gốc: nó làm hết bước 1, 2, 4 và mở cả hai trang. Giữ cửa sổ đó mở suốt buổi; cuối buổi nhấn `Q` rồi `Y` để tắt.
 Muốn vừa chạy vừa giải thích từng bước thì gõ tay:
 
 ```bash

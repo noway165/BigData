@@ -1,6 +1,7 @@
 @echo off
-rem Nhap dup de chay toan bo demo: Podman, Kafka, HDFS, Spark, producer, job
-rem analytics va dashboard. Chay lai duoc nhieu lan, khong tao trung job.
+rem Nhap dup de chay toan bo demo, roi nhan Q de tat.
+rem Bat Podman, Kafka, HDFS, Spark, producer, job analytics, Dashboard va Live feed.
+rem Chay lai duoc nhieu lan, khong tao trung job.
 rem Khong dau tieng Viet: CMD doc file bat theo code page he thong.
 setlocal
 cd /d "%~dp0"
@@ -37,7 +38,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/5] Bat Kafka, HDFS, Spark, producer, dashboard...
+echo [2/5] Bat Kafka, HDFS, Spark, producer, Dashboard, Live feed...
 podman compose --profile producer --profile dashboard up -d
 if errorlevel 1 (
   echo [LOI] compose that bai. Xem thong bao ben tren.
@@ -61,10 +62,11 @@ rem Pattern [a]nalytics_job de pgrep khong khop chinh cmdline cua lenh kiem tra.
 podman exec -d spark sh -lc "pgrep -f '[a]nalytics_job' >/dev/null || sh /opt/app/scripts/submit_analytics_job.sh > /opt/app/outputs/analytics_demo.log 2>&1"
 
 echo.
-echo [5/5] Mo dashboard...
+echo [5/5] Mo trinh duyet...
 start "" http://localhost:8501
 start "" http://localhost:8080
 
+:menu
 echo.
 echo ================================================================
 echo  Dashboard : http://localhost:8501   (Streamlit)
@@ -76,7 +78,39 @@ echo  Trang hien ngay du lieu con trong retention 24 gio.
 echo  Du lieu MOI can khoang 2 phut (window 1 phut + watermark 1 phut),
 echo  rieng bot_ratio can khoang 6 phut vi window 5 phut.
 echo.
-echo  Tat tat ca: nhap dup stop_demo.bat
+echo  [Q] Tat tat ca     [R] Mo lai trinh duyet     [S] Xem trang thai
 echo ================================================================
+choice /c QRS /n /m "Chon: "
+if errorlevel 3 goto status
+if errorlevel 2 goto reopen
+goto confirmstop
+
+:reopen
+start "" http://localhost:8501
+start "" http://localhost:8080
+goto menu
+
+:status
+echo.
+podman ps --format "table {{.Names}}\t{{.Status}}"
+goto menu
+
+:confirmstop
+echo.
+echo  Sap tat toan bo stack. Dang trinh bay thi dung tat.
+choice /c YN /n /m "Chac chan tat? [Y/N] "
+if errorlevel 2 goto menu
+
+echo.
+echo Dung job Spark...
+podman exec -i spark sh -lc "pkill -9 -f '[a]nalytics_job' || true; pkill -9 -f '[r]aw_to_hdfs' || true" >nul 2>&1
+
+echo Xoa container va network...
+podman compose --profile producer --profile dashboard down
+
+echo.
+echo Da tat. Volume du lieu van con, nen lan sau khong phai format HDFS
+echo hay tai lai jar connector:
+podman volume ls --format "{{.Name}}" | findstr /i wikipedia-realtime-analytics
 echo.
 pause
