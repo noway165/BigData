@@ -1,6 +1,6 @@
 # Bằng chứng kiểm thử phần ingestion
 
-Chạy ngày 2026-11-07 (UTC) trên stack test cục bộ của Lâm: Kafka 3.9.1, Hadoop 3.4.1, Spark 3.5.6, Podman. Chưa chạy trên `docker-compose.yml` của nhóm, vì file đó chưa có trong repo.
+Các kịch bản sự cố chạy ngày 2026-11-07 (UTC) trên stack test cục bộ của Lâm: Kafka 3.9.1, Hadoop 3.4.1, Spark 3.5.6, Podman. Sau đó phần ingestion được chạy lại trên `docker-compose.yml` của nhóm, xem mục cuối.
 
 Số liệu gốc: [`raw_quality_report.json`](raw_quality_report.json), [`producer_run.log`](producer_run.log). Ảnh HDFS: [`hdfs_raw_parquet.png`](hdfs_raw_parquet.png).
 
@@ -42,7 +42,24 @@ Trong một lần chạy khác, producer tắt khoảng 3 phút rồi chạy l�
 ## Chưa kiểm chứng
 
 - Chạy trên Docker thật. Toàn bộ đã chạy bằng Podman.
-- Chạy trên `docker-compose.yml` của Giang.
-- Bài crash recovery chính thức của Spark (phần của Giang). Mục raw query ở trên chỉ là một lần restart sau khi Kafka tắt, chưa lặp lại và chưa kill đột ngột.
+- Bài crash recovery cho raw sink. Bài của Giang chạy trên query analytics. Mục raw query ở trên chỉ là một lần restart sau khi Kafka tắt, chưa lặp lại và chưa kill đột ngột.
 - Dừng producer bằng Ctrl+C trên Windows. Tín hiệu dừng chỉ được test trong container Linux.
 - Server Wikimedia tự đóng stream. Không xảy ra trong các lần chạy, chỉ được unit test.
+
+## Chạy lại trên `docker-compose.yml` của nhóm
+
+Chạy ngày 2026-11-09 (UTC) theo đúng lệnh trong README: `compose up`, `bootstrap.sh`, producer, `submit_raw_job.sh`, `quality_report.sh`. Số liệu gốc: [`raw_quality_report_team_stack.json`](raw_quality_report_team_stack.json). Lần này không tạo sự cố.
+
+| Nơi đếm | Số event |
+|---|---|
+| Producer `delivered` | 13.778 |
+| Kafka, tổng end offset 3 partition (4.485 + 4.641 + 4.652) | 13.778 |
+| Parquet trên HDFS, đọc bằng Spark | 13.778 |
+| Dòng trùng `event_id` | 0 |
+| Hở offset nguồn (`missing`) | 0 |
+
+HDFS có 9 file Parquet, 5,6 MB, replication 1, `fsck` báo `HEALTHY`. Producer dừng với exit code 0, `undelivered=0`.
+
+Không dùng latency của lần chạy này để báo cáo: raw job được bật sau producer và phải tải connector, nên có backlog lúc đầu (p95 producer-to-processing 129 giây). Latency ổn định xem ở [`latency_report.md`](latency_report.md).
+
+Source-to-producer lần này có giá trị nhỏ nhất 1,006 giây, so với 0,281 giây ở lần đo ngày 2026-11-07 trên cùng máy. Mức sàn dịch khoảng 0,7 giây giữa hai lần đo cho thấy có thể đồng hồ máy đã lệch, đúng với giới hạn đo đã ghi. Chưa kiểm chứng nguyên nhân.

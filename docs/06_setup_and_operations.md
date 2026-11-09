@@ -1,8 +1,8 @@
 # Setup và vận hành: phần ingestion
 
-Tài liệu này hướng dẫn chạy và kiểm tra phần ingestion: producer, raw sink và cách đo. `docker-compose.yml`, service Kafka, Spark, HDFS và việc tạo topic do Giang phụ trách. Tên container và network dưới đây là chỗ giữ chỗ, cần điền theo `docker-compose.yml` của Giang khi file này có trong repo.
+Tài liệu này hướng dẫn chạy và kiểm tra phần ingestion: producer, raw sink và cách đo. `docker-compose.yml`, service Kafka, Spark, HDFS và việc tạo topic do Giang phụ trách: khởi động bằng `docker compose up -d`, rồi `sh scripts/bootstrap.sh`.
 
-Các lệnh dưới đây viết cho Docker. Với Podman, thay `docker` bằng `podman`.
+Các lệnh dưới đây viết cho Docker. Với Podman, thay `docker` bằng `podman`, và chạy script với `DOCKER=podman`.
 
 ## 1. Hạ tầng phần ingestion cần
 
@@ -14,20 +14,20 @@ Các lệnh dưới đây viết cho Docker. Với Podman, thay `docker` bằng 
 
 Giá trị mặc định giả định hostname nội bộ `kafka:9092` và `namenode:8020`. Stack khác tên thì đổi qua biến môi trường, không cần sửa code.
 
-Đã kiểm thử với Kafka 3.9.1 (KRaft), Hadoop 3.4.1 và Spark 3.5.6 (Scala 2.12). Đây chỉ là bộ dùng để test, phiên bản chính thức do Giang chốt. Nếu Spark khác 3.5.6 thì phải đặt `SPARK_KAFKA_PACKAGE` cho khớp.
+Đã chạy trên `docker-compose.yml` của nhóm: Kafka 3.9.1 (KRaft), Hadoop 3.4.1 và Spark 3.5.6 (Scala 2.12). Nếu đổi phiên bản Spark thì phải đặt `SPARK_KAFKA_PACKAGE` cho khớp.
 
 ## 2. Kiểm tra topic
 
-Giang tạo topic. Kiểm tra topic đã tồn tại trước khi chạy producer:
+`scripts/bootstrap.sh` tạo topic. Kiểm tra topic đã tồn tại trước khi chạy producer:
 
 ```bash
-docker exec <kafka-container> /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe --topic wikipedia-recent-changes
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe --topic wikipedia-recent-changes
 ```
 
 Nếu cần tạo thủ công để test riêng phần ingestion:
 
 ```bash
-docker exec <kafka-container> /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic wikipedia-recent-changes --partitions 3 --replication-factor 1 --config retention.ms=86400000
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic wikipedia-recent-changes --partitions 3 --replication-factor 1 --config retention.ms=86400000
 ```
 
 ## 3. Chạy producer
@@ -35,11 +35,13 @@ docker exec <kafka-container> /opt/kafka/bin/kafka-topics.sh --bootstrap-server 
 Trong container (khuyến nghị, chạy từ thư mục gốc repo):
 
 ```bash
-docker build -f src/producer/Dockerfile -t wikipedia-sse-producer .
+docker compose --profile producer up -d
 ```
 
+Trên Windows dùng `podman-compose`, lệnh trên lỗi `no Containerfile or Dockerfile specified`, vì `podman-compose` hiểu nhầm `E:\...` là git URL và bỏ qua đường dẫn Dockerfile. Khi đó build image trước, rồi chạy lại lệnh trên:
+
 ```bash
-docker run -d --name producer --network <network> -e KAFKA_BOOTSTRAP_SERVERS=kafka:9092 wikipedia-sse-producer
+podman build -f src/producer/Dockerfile -t wikipedia-sse-producer .
 ```
 
 Hoặc trên máy host, nếu Kafka có listener cho host (mặc định `localhost:9094`):
@@ -69,7 +71,7 @@ Chỉ chạy một producer tại một thời điểm. Hai producer song song s
 ## 4. Kiểm tra topic nhận event
 
 ```bash
-docker exec <kafka-container> /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka:9092 --topic wikipedia-recent-changes
+docker exec kafka /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka:9092 --topic wikipedia-recent-changes
 ```
 
 Tổng offset các partition phải tăng dần, và bằng `delivered` của producer nếu topic mới tạo và chỉ có một phiên producer.
@@ -79,7 +81,7 @@ Tổng offset các partition phải tăng dần, và bằng `delivered` của pr
 Mount repo vào container Spark tại `/opt/app` (hoặc đặt `APP_DIR`), rồi chạy:
 
 ```bash
-docker exec -d <spark-container> sh /opt/app/scripts/submit_raw_job.sh
+docker exec -d spark sh /opt/app/scripts/submit_raw_job.sh
 ```
 
 Lần đầu Spark tải connector nên cần Internet. File Parquet đầu tiên xuất hiện sau khoảng một phút.
@@ -87,7 +89,7 @@ Lần đầu Spark tải connector nên cần Internet. File Parquet đầu tiê
 Kiểm tra trên HDFS:
 
 ```bash
-docker exec <namenode-container> hdfs dfs -ls -R /data/raw/recent_changes
+docker exec namenode hdfs dfs -ls -R /data/raw/recent_changes
 ```
 
 File nằm ở dạng `year=2026/month=11/day=07/hour=17/part-*.parquet`. Có thể xem bằng giao diện web của NameNode, cổng 9870, mục Utilities, Browse the file system. Ảnh mẫu: [`outputs/experiment_results/hdfs_raw_parquet.png`](../outputs/experiment_results/hdfs_raw_parquet.png).
@@ -101,7 +103,7 @@ Trong file Parquet có sẵn 3 cột thời gian để đo latency. Nếu query 
 ## 6. Báo cáo chất lượng dữ liệu và latency
 
 ```bash
-docker exec <spark-container> sh /opt/app/scripts/quality_report.sh
+docker exec spark sh /opt/app/scripts/quality_report.sh
 ```
 
 Kết quả ghi vào `outputs/experiment_results/raw_quality_report.json`, gồm schema thực tế, trường thiếu, bản ghi trùng và p50/p95 của 3 loại latency. Ý nghĩa các trường xem ở [07_ingestion.md](07_ingestion.md).
@@ -127,7 +129,7 @@ python -m pytest tests -q
 Kiểm tra phép biến đổi Spark trên event mẫu, không cần Kafka hay HDFS:
 
 ```bash
-docker exec <spark-container> sh /opt/app/scripts/spark_selfcheck.sh
+docker exec spark sh /opt/app/scripts/spark_selfcheck.sh
 ```
 
 ## 8. Tài nguyên

@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-11-09T11:30:19+00:00",
+  "total_rows": 13778,
+  "event_time_range": [
+    "2026-11-09 11:22:33.963000",
+    "2026-11-09 11:28:05.957000"
+  ],
+  "parquet_schema": "struct<event_id:string,event_time:timestamp,producer_received_at:timestamp,wiki:string,title:string,type:string,namespace:int,user:string,bot:boolean,timestamp:bigint,raw_value:string,kafka_partition:int,kafka_offset:bigint,spark_processed_at:timestamp,year:int,month:int,day:int,hour:int>",
+  "missing_by_field": {
+    "event_id": 0,
+    "event_time": 0,
+    "producer_received_at": 0,
+    "raw_value": 0,
+    "wiki": 0,
+    "title": 0,
+    "type": 0,
+    "namespace": 0,
+    "user": 0,
+    "bot": 0,
+    "timestamp": 0
+  },
+  "duplicate_event_id_rows": 0,
+  "source_offsets": [
+    {
+      "topic": "eqiad.mediawiki.recentchange",
+      "partition": "0",
+      "min": 6652802825,
+      "max": 6652802825,
+      "distinct": 1,
+      "missing": 0
+    },
+    {
+      "topic": "codfw.mediawiki.recentchange",
+      "partition": "0",
+      "min": 2138151654,
+      "max": 2138165430,
+      "distinct": 13777,
+      "missing": 0
+    }
+  ],
+  "rows_by_type": {
+    "new": 388,
+    "log": 722,
+    "edit": 6708,
+    "categorize": 5960
+  },
+  "rows_by_bot_value": {
+    "True": 6353,
+    "False": 7425
+  },
+  "latency": {
+    "source_to_producer": {
+      "samples": 13778,
+      "p50_s": 1.0339999198913574,
+      "p95_s": 1.190000057220459,
+      "min_s": 1.00600004196167,
+      "max_s": 2.0490000247955322,
+      "negative_samples": 0
+    },
+    "producer_to_processing": {
+      "samples": 13778,
+      "p50_s": 24.374000072479248,
+      "p95_s": 129.3159999847412,
+      "min_s": 0.017999887466430664,
+      "max_s": 143.5939998626709,
+      "negative_samples": 0
+    },
+    "end_to_end": {
+      "samples": 13778,
+      "p50_s": 25.426000118255615,
+      "p95_s": 130.42799997329712,
+      "min_s": 1.0439999103546143,
+      "max_s": 144.6599998474121,
+      "negative_samples": 0
+    }
+  }
+}
