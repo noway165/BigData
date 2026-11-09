@@ -32,7 +32,7 @@ HDFS / Parquet                  Kafka: wikipedia-analytics
 
 | Phần | Người phụ trách | Trạng thái trong nhánh này |
 |---|---|---|
-| Producer, raw sink, đo latency, tài liệu setup | Lâm | Có, đã chạy thử trên stack test cục bộ |
+| Producer, raw sink, đo latency, tài liệu setup | Lâm | Có, đã chạy trên stack chung của nhóm |
 | `docker-compose.yml`, topic, Spark core, analytics query, recovery | Giang | Có, đã chạy end-to-end; có số liệu watermark và recovery |
 | Định nghĩa metric, Dashboard, trả lời phản biện | Khoa | Có; logic Dashboard có test, giao diện cần chạy với pipeline thật để chụp ảnh |
 | Live feed (`src/dashboard/dashboard.py`) | Giang | Có; trang HTTP riêng ở cổng 8080, đọc cả topic raw để hiện log từng lượt sửa |

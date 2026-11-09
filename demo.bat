@@ -22,14 +22,14 @@ echo [1/5] Khoi dong Podman machine...
 podman machine start >nul 2>&1
 rem win-sshproxy.exe chet neu con file socket cu, va khi do compose bao loi npipe.
 rem Thu goi compose that: do la thu duy nhat biet chac API da ket noi duoc.
-podman compose ls >nul 2>&1
+podman compose ps >nul 2>&1
 if errorlevel 1 (
   echo       Chua ket noi duoc docker API, xoa socket cu roi thu lai...
   del /f /q "%STALE_SOCK%" >nul 2>&1
   podman machine stop >nul 2>&1
   podman machine start >nul 2>&1
 )
-podman compose ls >nul 2>&1
+podman compose ps >nul 2>&1
 if errorlevel 1 (
   echo [LOI] Khong ket noi duoc docker API cua Podman.
   echo       Thu thu cong: podman machine stop ^&^& podman machine start
@@ -57,9 +57,13 @@ if exist "%GITBASH%" (
 )
 
 echo.
-echo [4/5] Chay job analytics trong container spark...
-rem Pattern [a]nalytics_job de pgrep khong khop chinh cmdline cua lenh kiem tra.
-podman exec -d spark sh -lc "pgrep -f '[a]nalytics_job' >/dev/null || sh /opt/app/scripts/submit_analytics_job.sh > /opt/app/outputs/analytics_demo.log 2>&1"
+echo [4/5] Chay job raw va analytics trong container spark...
+rem Mau phai co .py: neu khong, pgrep khop chu submit_analytics_job.sh trong chinh lenh nay va bo qua job.
+podman exec -d spark sh -lc "pgrep -f '[r]aw_to_hdfs' >/dev/null || sh /opt/app/scripts/submit_raw_job.sh > /opt/app/outputs/raw_demo.log 2>&1"
+rem Hai spark-submit cung luc co the chan nhau o buoc tai jar, nen cho job dau chay truoc.
+ping -n 21 127.0.0.1 >nul
+rem edit,new: chi dem luot sua that, bang dot bien khong bi tran trang Category.
+podman exec -d -e ANALYTICS_EVENT_TYPES=edit,new spark sh -lc "pgrep -f '[a]nalytics_job[.]py' >/dev/null || sh /opt/app/scripts/submit_analytics_job.sh > /opt/app/outputs/analytics_demo.log 2>&1"
 
 echo.
 echo [5/5] Mo trinh duyet...

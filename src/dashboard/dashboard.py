@@ -291,8 +291,7 @@ def _noscript_blocks(state: dict) -> str:
 
 # Bảng màu lấy từ skill dataviz và đã chạy qua validate_palette.js ở cả hai chế độ:
 # hai slot phân loại dùng cạnh nhau (xanh = người, cam = bot) đạt mọi ngưỡng CVD và tương phản.
-# Mặc định là nền sáng vì trang này chiếu lên tường lớp học; khối prefers-color-scheme là bước
-# màu riêng cho nền tối, không phải đảo ngược máy móc.
+# Luôn nền sáng, kể cả khi máy đặt chế độ tối: trang này chiếu lên tường lớp học.
 _CSS = """
 :root{
   --bg:#f9f9f7; --card:#fcfcfb; --line:#e1e0d9; --axis:#c3c2b7; --track:#eceae4;
@@ -300,14 +299,6 @@ _CSS = """
   --fg:#0b0b0b; --dim:#52514e; --muted:#6b6a65;
   --accent:#2a78d6; --human:#2a78d6; --bot:#eb6834; --unknown:#898781;
   --good:#0ca30c; --warn:#a66300; --crit:#d03b3b; --up:#006300; --down:#c23434;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#0d0d0d; --card:#1a1a19; --line:#2c2c2a; --axis:#383835; --track:#2c2c2a;
-    --fg:#f0efec; --dim:#c3c2b7; --muted:#898781;
-    --accent:#3987e5; --human:#3987e5; --bot:#d95926; --unknown:#898781;
-    --good:#0ca30c; --warn:#fab219; --crit:#d03b3b; --up:#0ca30c; --down:#e66767;
-  }
 }
 *{box-sizing:border-box}
 body{margin:0;padding:clamp(12px,1.5vw,28px);background:var(--bg);color:var(--fg);
