@@ -38,6 +38,10 @@ HDFS / Parquet                  Kafka: wikipedia-analytics
 
 Toàn bộ hạ tầng nằm trong [`docker-compose.yml`](docker-compose.yml): Kafka (KRaft), HDFS, Spark. Hướng dẫn đầy đủ và cách kiểm tra từng bước ở [`docs/06_setup_and_operations.md`](docs/06_setup_and_operations.md), kiến trúc và lý do chọn cấu hình ở [`docs/02_architecture.md`](docs/02_architecture.md).
 
+Trên Windows có sẵn Podman, cách nhanh nhất là **nhấp đúp [`start_demo.bat`](start_demo.bat)**:
+nó bật Podman machine, dựng toàn bộ stack, tạo topic, chạy job analytics và mở dashboard.
+Tắt bằng [`stop_demo.bat`](stop_demo.bat). Các lệnh thủ công tương đương:
+
 ```bash
 docker compose up -d
 ```

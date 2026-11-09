@@ -16,6 +16,9 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 
 **1. Khởi động hạ tầng**
 
+Nhanh nhất là nhấp đúp `start_demo.bat` ở thư mục gốc: nó làm hết bước 1, 2, 4 và mở dashboard.
+Muốn vừa chạy vừa giải thích từng bước thì gõ tay:
+
 ```bash
 docker compose up -d
 ```
