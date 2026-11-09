@@ -2,6 +2,7 @@
 # Heap của mỗi service được giới hạn vì máy test chỉ có ~3,7 GB cho container.
 #   docker compose up -d                      # Kafka + HDFS + Spark
 #   docker compose --profile producer up -d    # thêm producer
+#   docker compose --profile dashboard up -d   # thêm Dashboard, http://localhost:8501
 # Podman: podman-compose với cùng file này.
 name: wikipedia-realtime-analytics
 
@@ -122,6 +123,25 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC: ${KAFKA_TOPIC:-wikipedia-recent-changes}
       STATS_INTERVAL_S: ${STATS_INTERVAL_S:-30}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [wiki-net]
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: src/dashboard/Dockerfile
+    image: wikipedia-dashboard
+    container_name: dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_ANALYTICS_TOPIC: ${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}
+      DASHBOARD_REFRESH_S: ${DASHBOARD_REFRESH_S:-5}
     depends_on:
       kafka:
         condition: service_healthy

@@ -9,7 +9,9 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 | Tải sẵn jar connector vào cache Ivy | Chạy một lần `docker compose up -d && sh scripts/bootstrap.sh`, rồi `docker exec spark sh /opt/app/scripts/spark_analytics_selfcheck.sh`. Volume `spark_ivy` giữ jar, buổi demo không cần mạng để tải. |
 | Pull sẵn image | `docker compose pull` |
 | Chạy trước thí nghiệm watermark và recovery | Giữ nguyên thư mục trong `outputs/experiment_results/` để trình bày |
-| Mở sẵn tab | NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040` |
+| Mở sẵn tab | NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040`, Dashboard `http://localhost:8501` |
+| Build sẵn image Dashboard | `docker compose --profile dashboard build` (cần mạng để cài Streamlit) |
+| Lưu output analytics dự phòng | `sh scripts/capture_analytics.sh 5000` sau khi analytics đã chạy ~15 phút |
 | Chạy producer sớm 10–15 phút | Để HDFS đã có vài partition giờ và Kafka đã có dữ liệu |
 
 ## Trình tự demo
@@ -58,9 +60,23 @@ sh scripts/consume_analytics.sh 10
 
 Chỉ ra ba metric trên cùng một topic, biên window theo event time, và `threshold_edits` đi kèm bản ghi spike. Mở Spark UI tab Structured Streaming: ba query, mỗi query một checkpoint riêng.
 
-**5. Dashboard**
+**5. Dashboard** (Khoa trình bày)
 
-Phần Dashboard trình bày, đọc từ topic `wikipedia-analytics`.
+```bash
+docker compose --profile dashboard up -d
+```
+
+Mở `http://localhost:8501`. Chỉ lần lượt:
+
+1. Hàng chỉ số trên cùng: số event của window 1 phút mới nhất, so với phút trước. Nhấn mạnh window theo **event time** và chỉ phát khi đã đóng, nên số liệu chậm hơn đồng hồ khoảng 2–3 phút — đó là cái giá của watermark 1 phút.
+2. Biểu đồ số event mỗi phút, tách Bot / Human + Unknown; Top wiki (thường là `commonswiki`, `wikidatawiki`, `enwiki`).
+3. Donut Bot / Human / Unknown: mẫu số là tổng event của cùng window 5 phút, kể cả Unknown.
+4. Bảng cảnh báo spike: gọi là "hoạt động tăng đột biến", không phải edit war; chỉ cột *Do bot* và bật "Ẩn spike chủ yếu do bot" để thấy phần còn lại.
+5. Mở khung "Độ trễ phát kết quả và tình trạng dữ liệu": độ trễ `emitted_at − window_end`, số bản ghi lặp đã khử.
+
+Sau bước 6 (recovery), quay lại khung này: số "bản ghi lặp đã khử" có thể tăng — đó là at-least-once của Kafka sink, Dashboard đã xử lý.
+
+Dự phòng nếu Kafka/Spark trục trặc: `ANALYTICS_SOURCE_FILE=outputs/experiment_results/analytics_capture.jsonl streamlit run src/dashboard/app.py` (file lưu trước bằng `sh scripts/capture_analytics.sh 5000`).
 
 **6. Crash recovery**
 

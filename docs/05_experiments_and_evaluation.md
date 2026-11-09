@@ -1,6 +1,6 @@
 # Thí nghiệm và đánh giá
 
-Tài liệu này chứa hai thí nghiệm của phần stream processing: so sánh watermark và phục hồi sau sự cố. Kết quả latency và chất lượng dữ liệu nằm ở [latency_report.md](../outputs/experiment_results/latency_report.md) và [ingestion_verification.md](../outputs/experiment_results/ingestion_verification.md). Kết quả analytics và ảnh Dashboard do phần Dashboard bổ sung.
+Tài liệu này chứa hai thí nghiệm của phần stream processing: so sánh watermark và phục hồi sau sự cố. Kết quả latency và chất lượng dữ liệu nằm ở [latency_report.md](../outputs/experiment_results/latency_report.md) và [ingestion_verification.md](../outputs/experiment_results/ingestion_verification.md). Kết quả analytics và Dashboard nằm ở mục 4.
 
 Số liệu dưới đây là của một lần chạy thật ngày 2026-11-07, trên Windows 11 (16 GB RAM) với Podman 6.1.4 chạy trong WSL2 (7,6 GB khả dụng cho container): 1 broker Kafka, 1 NameNode, 1 DataNode, Spark `local[2]`, driver 1 GB. Một lần chạy trên một máy, không phải benchmark.
 
@@ -121,3 +121,56 @@ Lần chạy trên chỉ là **một** lần. Chạy lại ít nhất một lầ
 - Một sự kiện nóng ngoài đời cũng tạo nhiều lượt sửa từ nhiều người mà không phải tranh chấp. Nhiều lượt sửa không chứng minh được động cơ.
 - `distinct_users` dùng `approx_count_distinct`, nên là số gần đúng; với ngưỡng nhỏ, sai số này có thể đổi kết quả lọc.
 - Topic chứa mọi `type`, kể cả `categorize` và `log`. Mặc định đếm tất cả. Muốn chỉ tính lượt sửa thật thì đặt `ANALYTICS_EVENT_TYPES=edit,new`; trường `counted_types` trong output ghi lại lựa chọn đó.
+
+## 4. Analytics và Dashboard
+
+### Cách chạy
+
+```bash
+docker exec -d spark sh /opt/app/scripts/submit_analytics_job.sh
+docker compose --profile dashboard up -d      # http://localhost:8501
+```
+
+Hoặc chạy Dashboard trên máy host (Kafka mở cổng 9094):
+
+```bash
+pip install -r src/dashboard/requirements.txt
+streamlit run src/dashboard/app.py
+```
+
+Dự phòng khi Kafka không chạy được lúc demo: `ANALYTICS_SOURCE_FILE=<file.jsonl> streamlit run src/dashboard/app.py`. Lưu trước output thật bằng `sh scripts/capture_analytics.sh 5000` (ghi `outputs/experiment_results/analytics_capture.jsonl`), rồi chạy `ANALYTICS_SOURCE_FILE=outputs/experiment_results/analytics_capture.jsonl streamlit run src/dashboard/app.py`. File `tests/sample_events/analytics_sample.jsonl` là dữ liệu **tổng hợp** chỉ để test, không dùng làm số liệu báo cáo.
+
+### Dashboard hiển thị gì
+
+| Khu vực | Nguồn | Ghi chú |
+|---|---|---|
+| Event trong window 1 phút mới nhất, so với phút trước | `edit_count`, cộng mọi wiki | Theo event time |
+| Tỷ lệ Human, số bài có spike, số wiki hoạt động | ba metric | |
+| Số event mỗi phút, tách Bot / Human + Unknown | `edit_count` | Biểu đồ vùng xếp chồng |
+| Top wiki trong N phút gần nhất | `edit_count` | N chỉnh được ở sidebar |
+| Donut Bot / Human / Unknown và đường tỷ lệ theo thời gian | `bot_ratio` | Mẫu số là tổng event của cùng window 5 phút |
+| Bảng cảnh báo hoạt động tăng đột biến | `activity_spike` | Gộp window trượt chồng nhau theo bài; cột *Do bot* |
+| Độ trễ phát kết quả, message hỏng, bản ghi lặp đã khử | mọi metric | Trong khung mở rộng cuối trang |
+
+### Thiết kế đáng chú ý
+
+- **Tách processing và visualization.** Dashboard chỉ đọc topic `wikipedia-analytics`, không đọc raw stream và không tính lại aggregation. Dashboard chậm hay chết không ảnh hưởng Spark; Spark chết thì Dashboard vẫn hiện số cũ và tiếp tục khi Spark chạy lại.
+- **Chịu bản ghi lặp.** Kafka sink là at-least-once (mục 2). Dashboard khử trùng theo khóa tự nhiên — `(window_start, wiki)` cho edit count, `window_start` cho bot ratio, `(window_start, wiki, title)` cho spike — và giữ bản có `emitted_at` mới nhất. Số bản đã khử hiển thị trên trang, nên sau bài test recovery có thể chỉ ra trực tiếp.
+- **Không mất lịch sử khi mở lại.** Consumer dùng `group.id` ngẫu nhiên, đọc từ đầu topic và không commit offset.
+- **Message hỏng không làm sập trang.** JSON lỗi hoặc metric lạ được đếm và hiển thị.
+
+### Kiểm thử
+
+`tests/test_dashboard_view.py` (10 test, chạy bằng `python -m pytest tests -q`) kiểm tra: đếm message hỏng, khử trùng giữ bản mới nhất, tổng window và chênh lệch, Top wiki chỉ tính N window gần nhất, mẫu số Bot/Human/Unknown gồm Unknown, gộp spike theo bài và cờ *Do bot*, độ trễ phát kết quả, và trường hợp chưa có dữ liệu.
+
+Hạn chế của phần kiểm thử: test chạy trên logic xử lý bảng (`analytics_view.py`), không chạy giao diện Streamlit. Giao diện được kiểm tra bằng cách chạy với pipeline thật và chụp ảnh.
+
+### Kết quả
+
+| Bằng chứng | Trạng thái |
+|---|---|
+| Ảnh Dashboard chạy trên pipeline thật | `outputs/experiment_results/dashboard_live.png` — **cần chụp khi chạy thật** |
+| Ảnh bảng spike có ít nhất một dòng | `outputs/experiment_results/dashboard_spike.png` — **cần chụp khi chạy thật** |
+| Số bản ghi lặp đã khử sau bài test recovery | ghi lại từ khung "Độ trễ phát kết quả" |
+
+Khi ghi số liệu vào báo cáo, ghi kèm thời điểm chạy, `counted_types` và watermark.
