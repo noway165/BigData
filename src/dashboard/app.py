@@ -123,6 +123,16 @@ def get_feed() -> AnalyticsFeed:
     return AnalyticsFeed()
 
 
+def utc_naive(df: pd.DataFrame) -> pd.DataFrame:
+    """Bỏ múi giờ trước khi vẽ: Vega-Lite đổi timestamp có múi giờ sang giờ của trình duyệt
+    (ở Việt Nam là UTC+7), trong khi trục ghi UTC. Timestamp không múi giờ được vẽ nguyên giá trị."""
+    df = df.copy()
+    for col in ("window_start", "window_end"):
+        if col in df.columns and isinstance(df[col].dtype, pd.DatetimeTZDtype):
+            df[col] = df[col].dt.tz_convert("UTC").dt.tz_localize(None)
+    return df
+
+
 def fmt_time(ts) -> str:
     return "—" if ts is None or pd.isna(ts) else pd.Timestamp(ts).strftime("%H:%M:%S UTC")
 
@@ -192,8 +202,8 @@ def render():
         long = timeline.melt(id_vars="window_start", value_vars=["bot_edits", "non_bot_edits"],
                              var_name="loại", value_name="event")
         long["loại"] = long["loại"].map({"bot_edits": "Bot", "non_bot_edits": "Human + Unknown"})
-        chart = (alt.Chart(long).mark_area(opacity=0.85)
-                 .encode(x=alt.X("window_start:T", title="Window bắt đầu (UTC)"),
+        chart = (alt.Chart(utc_naive(long)).mark_area(opacity=0.85)
+                 .encode(x=alt.X("window_start:T", title="Window bắt đầu (UTC)", axis=alt.Axis(format="%H:%M")),
                          y=alt.Y("event:Q", stack=True, title="Số event"),
                          color=alt.Color("loại:N", scale=alt.Scale(
                              domain=["Bot", "Human + Unknown"], range=["#E07B39", "#3B7DD8"])),
@@ -228,8 +238,8 @@ def render():
         st.subheader("Tỷ lệ theo thời gian")
         hist = av.bot_ratio_history(bot_df)
         if not hist.empty:
-            lines = (alt.Chart(hist).mark_line(point=True)
-                     .encode(x=alt.X("window_start:T", title="Window 5 phút (UTC)"),
+            lines = (alt.Chart(utc_naive(hist)).mark_line(point=True)
+                     .encode(x=alt.X("window_start:T", title="Window 5 phút (UTC)", axis=alt.Axis(format="%H:%M")),
                              y=alt.Y("share:Q", axis=alt.Axis(format="%"), title="Tỷ lệ"),
                              color=alt.Color("category:N", scale=CATEGORY_COLORS, title=None)))
             st.altair_chart(lines, use_container_width=True)
