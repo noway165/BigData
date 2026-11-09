@@ -109,7 +109,7 @@ git commit -m "Parse and mask raw events for the dashboard log"
 
 **Interfaces:**
 - Consumes: `log_entry` from Task 1.
-- Produces: `new_state()` gains `wiki_split: dict[str, dict]` (per wiki, the newest window's `edit_count`, `bot_edits` and derived `human_edits`), `bot_history: dict[str, dict]` (window_start to the newest `bot_ratio` record for it, trimmed to `BOT_HISTORY_WINDOWS`), and `log: collections.deque` (newest first, `maxlen=LOG_LINES`). `update_log(state: dict, entry: dict) -> dict` pushes one parsed entry.
+- Produces: `new_state()` gains `wiki_split: dict[str, dict]` (per wiki, the newest window's `edit_count`, `bot_edits` and derived `human_edits`), `bot_history: dict[str, dict]` (window_start to the newest `bot_ratio` record for it, trimmed to `BOT_HISTORY_WINDOWS`), and `log: collections.deque` (newest first, `maxlen=LOG_LINES`). Task 2 also declares the two constants this state needs: `LOG_LINES` (`DASHBOARD_LOG_LINES`, default `60`) and `BOT_HISTORY_WINDOWS` (default `12`). `update_log(state: dict, entry: dict) -> dict` pushes one parsed entry.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -186,7 +186,7 @@ Expected: FAIL with `NameError: name 'state_json' is not defined`
 
 `state_json` converts the deque to a list and the window maps to time-sorted lists, so the result is JSON-serializable. `kpi` carries `edits_per_minute` (the newest timeline window's total), `bot_share`, `active_wikis`, `recent_spikes` (spikes inside the newest 10 windows), `emit_lag_seconds` (`emitted_at` minus `window_end` of the newest analytics record) and `total_records`. `consume_raw_forever` mirrors `consume_forever`: it imports `confluent_kafka` inside the function, subscribes to `RAW_TOPIC` with `auto.offset.reset=latest`, and for each message parses the envelope's `raw_value`, calls `log_entry`, and calls `update_log` under the lock when it is not `None`. `main` starts it as a second daemon thread. The request handler builds the snapshot inside `with lock:` and serializes it outside.
 
-New module constants read from the environment: `RAW_TOPIC` (`KAFKA_TOPIC`, default `wikipedia-recent-changes`), `LOG_WIKIS` (`DASHBOARD_LOG_WIKIS`, default `enwiki,viwiki`), `LOG_KINDS` (fixed `edit,new`), `LOG_LINES` (`DASHBOARD_LOG_LINES`, default `60`), `BOT_HISTORY_WINDOWS` (default `12`). Add `KAFKA_TOPIC`, `DASHBOARD_LOG_WIKIS` and `DASHBOARD_LOG_LINES` to the `dashboard` service in `docker-compose.yml` and to `.env.example`.
+New module constants read from the environment: `RAW_TOPIC` (`KAFKA_TOPIC`, default `wikipedia-recent-changes`), `LOG_WIKIS` (`DASHBOARD_LOG_WIKIS`, default `enwiki,viwiki`), `LOG_KINDS` (fixed `edit,new`), Add `KAFKA_TOPIC`, `DASHBOARD_LOG_WIKIS` and `DASHBOARD_LOG_LINES` to the `dashboard` service in `docker-compose.yml` and to `.env.example`.
 
 - [ ] **Step 4: Run the tests to verify they pass, then check the endpoint against the live stack**
 
@@ -224,7 +224,7 @@ page = render_page(state, "12:00:00")
 assert "<noscript>" in page and "Chưa có window nào đóng" in render_page(new_state(), "12:00:00")
 assert "/api/state" in page
 assert "<script>alert(1)</script>" not in page and "&lt;script&gt;" in page
-assert "http://" not in page.split("<noscript>")[0]   # không tải tài nguyên ngoài
+assert 'src="http' not in page and 'href="http' not in page   # không tải tài nguyên ngoài
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
