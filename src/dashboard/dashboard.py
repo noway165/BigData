@@ -600,8 +600,13 @@ var latest=null, busy=false;
 async function tick(){
   if(busy)return;  // một poll chậm trả về sau poll mới hơn sẽ vẽ đè dữ liệu cũ lên dữ liệu mới
   busy=true;
+  // Phải có timeout: một kết nối treo nửa chừng (hay gặp sau khi container khởi động lại) sẽ giữ
+  // cờ busy mãi mãi, trang đứng im mà chặng 5 vẫn xanh — kiểu hỏng tệ nhất trên màn chiếu.
+  // abort làm fetch ném, nên nó đi đúng nhánh catch như mọi lỗi mạng khác.
+  var stop=new AbortController();
+  var timer=setTimeout(function(){stop.abort()},5000);
   try{
-    var res=await fetch('/api/state',{cache:'no-store'});
+    var res=await fetch('/api/state',{cache:'no-store',signal:stop.signal});
     if(!res.ok)throw new Error('HTTP '+res.status);
     var data=await res.json();
     latest=data;
@@ -612,6 +617,7 @@ async function tick(){
     console.error('[dashboard] không lấy được /api/state:',err);
     if(latest)safe('trạng thái',function(x){statusBar(x,false)},latest);
   }finally{
+    clearTimeout(timer);
     busy=false;
   }
 }

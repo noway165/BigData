@@ -115,7 +115,10 @@ assert "/api/state" in page
 
 # Phòng bảo vệ có thể không có mạng, nên không được có BẤT KỲ tài nguyên ngoài nào. Dùng regex
 # để bắt cả nháy đơn, url(...) trong CSS, @import và fetch('http...'), không chỉ src=" / href=".
-EXTERNAL = re.compile(r"""(?:src|href)\s*=\s*['"]?https?:|url\(\s*['"]?https?:|@import""", re.I)
+EXTERNAL = re.compile(r"""(?:src|href)\s*=\s*['"]?https?:"""
+                      r"""|url\(\s*['"]?https?:"""
+                      r"""|fetch\(\s*['"]?https?:"""
+                      r"""|@import""", re.I)
 assert not EXTERNAL.search(page), EXTERNAL.search(page).group(0)
 assert not EXTERNAL.search(render_page(new_state(), "12:00:00"))
 
