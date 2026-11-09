@@ -127,6 +127,30 @@ services:
         condition: service_healthy
     networks: [wiki-net]
 
+  dashboard:
+    # Dùng lại image của producer: nó đã có python 3.12 và confluent-kafka, nên
+    # dashboard không thêm image, dependency hay bước build nào.
+    build:
+      context: .
+      dockerfile: src/producer/Dockerfile
+    image: wikipedia-sse-producer
+    container_name: dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    command: ["python", "-u", "/opt/app/src/dashboard/dashboard.py"]
+    ports:
+      - "${DASHBOARD_PORT:-8080}:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_ANALYTICS_TOPIC: ${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}
+      DASHBOARD_REFRESH_S: ${DASHBOARD_REFRESH_S:-5}
+    volumes:
+      - .:/opt/app:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [wiki-net]
+
 volumes:
   kafka_data:
   namenode_data:

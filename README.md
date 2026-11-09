@@ -23,7 +23,7 @@ Raw Data Query                    Analytics Query
 HDFS / Parquet                  Kafka: wikipedia-analytics
                                          |
                                          v
-                                 Streamlit Dashboard
+                                 Dashboard HTTP (src/dashboard)
 ```
 
 ## Trạng thái
@@ -32,7 +32,7 @@ HDFS / Parquet                  Kafka: wikipedia-analytics
 |---|---|---|
 | Producer, raw sink, đo latency, tài liệu setup | Lâm | Có, đã chạy thử trên stack test cục bộ |
 | `docker-compose.yml`, topic, Spark core, analytics query, recovery | Giang | Có, đã chạy end-to-end; có số liệu watermark và recovery |
-| Dashboard, slide báo cáo | Khoa | Chưa có |
+| Dashboard, slide báo cáo | Khoa | Slide chưa có. Dashboard: có bản tối thiểu `src/dashboard/dashboard.py` để demo được ngay, thay bằng bản của Khoa khi xong |
 
 ## Khởi động
 
@@ -66,6 +66,12 @@ Chạy analytics (event-time window, watermark, ghi vào topic `wikipedia-analyt
 
 ```bash
 docker exec -d spark sh /opt/app/scripts/submit_analytics_job.sh
+```
+
+Chạy dashboard (đọc topic `wikipedia-analytics`, mở http://localhost:8080):
+
+```bash
+docker compose --profile dashboard up -d
 ```
 
 Kiểm tra Parquet trên HDFS:

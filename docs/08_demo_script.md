@@ -9,7 +9,7 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 | Tải sẵn jar connector vào cache Ivy | Chạy một lần `docker compose up -d && sh scripts/bootstrap.sh`, rồi `docker exec spark sh /opt/app/scripts/spark_analytics_selfcheck.sh`. Volume `spark_ivy` giữ jar, buổi demo không cần mạng để tải. |
 | Pull sẵn image | `docker compose pull` |
 | Chạy trước thí nghiệm watermark và recovery | Giữ nguyên thư mục trong `outputs/experiment_results/` để trình bày |
-| Mở sẵn tab | NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040` |
+| Mở sẵn tab | Dashboard `http://localhost:8080`, NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040` |
 | Chạy producer sớm 10–15 phút | Để HDFS đã có vài partition giờ và Kafka đã có dữ liệu |
 
 ## Trình tự demo
@@ -60,7 +60,17 @@ Chỉ ra ba metric trên cùng một topic, biên window theo event time, và `t
 
 **5. Dashboard**
 
-Phần Dashboard trình bày, đọc từ topic `wikipedia-analytics`.
+```bash
+docker compose --profile dashboard up -d
+```
+
+Mở `http://localhost:8080`. Trang tự refresh 5 giây, không dùng tài nguyên ngoài nên không cần mạng.
+
+Chỉ ra: lượt sửa theo từng window 1 phút, top wiki của window mới nhất, tỷ lệ Bot/Human/Unknown của window 5 phút, và bảng trang vượt ngưỡng đột biến kèm ngưỡng đang áp dụng.
+
+Mỗi lần khởi động, dashboard dùng `group.id` mới và đọc từ `earliest`, nên trang có dữ liệu ngay từ phần còn trong retention 24 giờ thay vì phải chờ window đầu tiên đóng. Đây là lý do nên bật nó **trước** khi vào phòng, chứ không bật lúc đang trình bày.
+
+Đây là bản tối thiểu để luôn có thứ hiển thị được; nếu bản Dashboard của Khoa chạy được thì trình bày bản đó, hợp đồng JSON giống nhau (mục 5 của [02_architecture.md](02_architecture.md)).
 
 **6. Crash recovery**
 
@@ -92,6 +102,7 @@ Latency p50/p95 ([latency_report.md](../outputs/experiment_results/latency_repor
 | Submit hai job cùng lúc khi cache Ivy còn trống | Hai tiến trình `spark-submit` cùng resolve một package có thể chặn nhau và job treo không ghi gì. Submit job đầu, chờ nó chạy, rồi submit job thứ hai. Luôn redirect log (`> /opt/app/outputs/<ten>.log 2>&1`) để nhìn thấy khi nó treo. |
 | `spark-submit` treo ở bước tải package | Jar đã nằm trong volume `spark_ivy`; kiểm tra `docker exec spark ls /tmp/ivy/jars`. Thiếu thì chạy lại một job trước đó để nạp cache. |
 | Query lỗi ghi HDFS | Kiểm tra namenode còn sống: `docker exec namenode hdfs dfsadmin -report`. |
+| Dashboard trống | Topic chưa có message nào, xem dòng dưới. Nếu topic có dữ liệu mà trang vẫn trống thì xem `docker logs dashboard`. |
 | Topic analytics rỗng | Window chưa đóng. `outputMode("append")` chỉ phát khi window đóng, nên phải chờ qua `window + watermark`. |
 | Producer không gửi | `docker logs producer`: nếu `reconnects` tăng liên tục thì là mạng hoặc rate limit của Wikimedia. |
 | Hết RAM | Dừng nhánh raw (`docker exec spark pkill -f raw_to_hdfs.py`), demo nhánh analytics; hoặc giảm `ANALYTICS_METRICS` xuống một metric. |

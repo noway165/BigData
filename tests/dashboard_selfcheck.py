@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Selfcheck cho dashboard: state và render, không cần Kafka.
+
+Chạy:  python tests/dashboard_selfcheck.py
+Chỉ dùng stdlib, nên chạy được trên máy host không cài confluent-kafka
+(`confluent_kafka` chỉ được import bên trong consume_forever).
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "dashboard"))
+
+from dashboard import new_state, render_page, update_state  # noqa: E402
+
+
+def edit(wiki, window, count, bots=0):
+    return {"metric": "edit_count", "wiki": wiki, "edit_count": count, "bot_edits": bots,
+            "window_start": f"2026-11-08T10:{window}:00.000Z",
+            "window_end": f"2026-11-08T10:{window:02d}:59.999Z", "counted_types": "all"}
+
+
+def ratio(window, bot, human, unknown):
+    total = bot + human + unknown
+    return {"metric": "bot_ratio", "total_events": total, "bot_count": bot,
+            "human_count": human, "unknown_count": unknown,
+            "bot_share": round(bot / total, 4), "human_share": round(human / total, 4),
+            "unknown_share": round(unknown / total, 4),
+            "window_start": f"2026-11-08T10:{window}:00.000Z",
+            "window_end": f"2026-11-08T10:{window + 5:02d}:00.000Z", "counted_types": "all"}
+
+
+def spike(title, count=14, users=5):
+    return {"metric": "activity_spike", "wiki": "enwiki", "title": title, "edit_count": count,
+            "distinct_users": users, "bot_edits": 1, "human_edits": count - 1,
+            "threshold_edits": 10, "threshold_distinct_users": 0,
+            "window_start": "2026-11-08T10:12:00.000Z", "window_end": "2026-11-08T10:14:00.000Z"}
+
+
+state = new_state()
+
+# Window mới hơn thay thế window cũ hơn của cùng wiki.
+update_state(state, edit("enwiki", 10, 40))
+update_state(state, edit("enwiki", 11, 55))
+assert state["edit_count"]["enwiki"]["edit_count"] == 55, state["edit_count"]["enwiki"]
+
+# Bản ghi đến muộn của window cũ KHÔNG được ghi đè window mới: Kafka không bảo đảm
+# thứ tự giữa các partition.
+update_state(state, edit("enwiki", 10, 999))
+assert state["edit_count"]["enwiki"]["edit_count"] == 55, state["edit_count"]["enwiki"]
+
+# Timeline cộng mọi wiki trong cùng window.
+update_state(state, edit("dewiki", 11, 20))
+assert state["timeline"]["2026-11-08T10:11:00.000Z"] == 75, state["timeline"]
+assert state["timeline"]["2026-11-08T10:10:00.000Z"] == 40 + 999, state["timeline"]
+
+# bot_ratio giữ window mới nhất, bản ghi cũ đến sau không ghi đè.
+update_state(state, ratio(10, 30, 60, 10))
+update_state(state, ratio(15, 10, 80, 10))
+update_state(state, ratio(10, 1, 1, 1))
+assert state["bot_ratio"]["window_start"] == "2026-11-08T10:15:00.000Z", state["bot_ratio"]
+assert state["bot_ratio"]["bot_count"] == 10, state["bot_ratio"]
+
+# Metric lạ bị bỏ qua, không làm hỏng state.
+update_state(state, {"metric": "khong_ton_tai", "window_start": "2026-11-08T10:20:00.000Z"})
+update_state(state, {})
+assert state["ignored"] == 2, state["ignored"]
+assert state["total"] == 7, state["total"]
+assert state["last_window"] == "2026-11-08T10:15:00.000Z", state["last_window"]
+
+# Tiêu đề trang Wikipedia có thể chứa HTML; phải escape, nếu không trang vỡ.
+update_state(state, spike("<script>alert(1)</script>"))
+update_state(state, spike("Tranh cãi & bàn luận"))
+page = render_page(state, "12:00:00")
+assert "<script>alert(1)</script>" not in page
+assert "&lt;script&gt;" in page
+assert "Tranh cãi &amp; bàn luận" in page
+
+# Nội dung thật sự xuất hiện trên trang.
+assert "enwiki" in page and "55" in page
+assert "Human" in page and "80" in page
+
+# Trang rỗng vẫn render được và nói rõ vì sao chưa có gì.
+empty = render_page(new_state(), "12:00:00")
+assert "Chưa có window nào đóng" in empty
+assert "<html" in empty
+
+print("DASHBOARD SELFCHECK OK")

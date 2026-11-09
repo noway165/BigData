@@ -28,7 +28,7 @@ HDFS Parquet                        Kafka topic: wikipedia-analytics
 /data/raw/recent_changes/            edit_count, bot_ratio, activity_spike
 year=/month=/day=/hour=                     |
           |                                 v
-          v                           Streamlit Dashboard
+          v                           Dashboard HTTP (src/dashboard)
 quality_report.py (batch)
  chất lượng dữ liệu + 3 loại latency
 ```
@@ -43,7 +43,7 @@ Mọi dịch vụ chạy trong `docker-compose.yml` trên một network `wiki-ne
 | Raw và Analytics là hai nhánh query riêng, đọc cùng một topic | Dashboard không phải quét lại raw; lỗi ở một nhánh không làm nhánh kia dừng | Dữ liệu được đọc từ Kafka hai lần |
 | Mỗi streaming query một `checkpointLocation` riêng | Checkpoint lưu offset và state của riêng query đó. Dùng chung sẽ làm hai query ghi đè tiến độ của nhau. | Nhiều thư mục checkpoint phải quản lý |
 | Checkpoint đặt trên HDFS (`hdfs://namenode:8020/checkpoints/...`) | Bền vững qua việc xóa và tạo lại container. Checkpoint trong filesystem container sẽ mất, và bài test recovery sẽ vô nghĩa. | Phụ thuộc HDFS phải sống trước khi submit job |
-| Analytics output đi qua Kafka topic thay vì database | Không thêm thành phần mới; Spark và Streamlit tích hợp độc lập qua một hợp đồng JSON | Topic không phục vụ truy vấn lịch sử; Dashboard phải tự giữ state hiển thị |
+| Analytics output đi qua Kafka topic thay vì database | Không thêm thành phần mới; Spark và Dashboard tích hợp độc lập qua một hợp đồng JSON | Topic không phục vụ truy vấn lịch sử; Dashboard phải tự giữ state hiển thị |
 | `outputMode("append")` cho cả ba metric | Có watermark thì mỗi window chỉ phát một lần khi đóng, nên Dashboard không phải lọc bản ghi lặp của cùng một window | Chỉ thấy kết quả sau khi window đóng, nên trễ hơn `update` |
 | Spark chạy `local[2]` trong một container | Máy test chỉ còn khoảng 3,7 GB cho container, thêm master và worker daemon sẽ lấy RAM của Kafka và HDFS | Không minh họa được phân phối task nhiều executor |
 | `failOnDataLoss=false` ở Kafka source | Retention 24 giờ có thể xóa offset cũ trong lúc query đang chết. Query phải chạy tiếp thay vì tắt. | Nếu mất dữ liệu thật thì chỉ có cảnh báo trong log |
