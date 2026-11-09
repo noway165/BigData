@@ -1,6 +1,6 @@
 # Công nghệ sử dụng
 
-Bảng dưới ghi phiên bản Lâm đã chạy thử phần ingestion. Giang chốt phiên bản chính thức trong `docker-compose.yml`. Nếu khác bảng này thì cập nhật cả bảng và `SPARK_KAFKA_PACKAGE`.
+Bảng dưới là phiên bản chính thức, đã chốt trong [`docker-compose.yml`](../docker-compose.yml) và trong `SPARK_KAFKA_PACKAGE` của `scripts/submit_*.sh`. Đổi một dòng ở đây thì phải sửa cả hai nơi đó.
 
 | Thành phần | Phiên bản đã test | Vai trò |
 |---|---|---|

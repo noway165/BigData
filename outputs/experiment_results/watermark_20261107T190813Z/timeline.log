@@ -1,0 +1,27 @@
+[19:08:13] lưu mẫu 20000 message từ wikipedia-recent-changes
+20000 outputs/experiment_results/watermark_20261107T190813Z/sample.jsonl
+[19:08:16] cấu hình watermark=10 seconds
+[19:09:02]   watermark=10 seconds đang chạy
+[19:09:32]   watermark=10 seconds đang chạy
+[19:10:02]   watermark=10 seconds đang chạy
+[19:10:32]   watermark=10 seconds đang chạy
+[19:11:02]   watermark=10 seconds đang chạy
+[19:11:32]   watermark=10 seconds đang chạy
+[19:12:02]   watermark=10 seconds đang chạy
+[19:12:02] cấu hình watermark=1 minute
+[19:12:46]   watermark=1 minute đang chạy
+[19:13:16]   watermark=1 minute đang chạy
+[19:13:46]   watermark=1 minute đang chạy
+[19:14:16]   watermark=1 minute đang chạy
+[19:14:47]   watermark=1 minute đang chạy
+[19:15:17]   watermark=1 minute đang chạy
+[19:15:47]   watermark=1 minute đang chạy
+[19:15:47] cấu hình watermark=5 minutes
+[19:16:34]   watermark=5 minutes đang chạy
+[19:17:04]   watermark=5 minutes đang chạy
+[19:17:34]   watermark=5 minutes đang chạy
+[19:18:04]   watermark=5 minutes đang chạy
+[19:18:34]   watermark=5 minutes đang chạy
+[19:19:04]   watermark=5 minutes đang chạy
+[19:19:34]   watermark=5 minutes đang chạy
+[19:19:34] xong. Kết quả: outputs/experiment_results/watermark_20261107T190813Z

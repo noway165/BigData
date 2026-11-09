@@ -1,0 +1,12 @@
+-rw-r--r--   1 root supergroup        775 2026-11-07 18:56 /checkpoints/analytics_edit_count_recovery/offsets/5
+-rw-r--r--   1 root supergroup        775 2026-11-07 18:57 /checkpoints/analytics_edit_count_recovery/offsets/6
+-rw-r--r--   1 root supergroup        775 2026-11-07 18:57 /checkpoints/analytics_edit_count_recovery/offsets/7
+-rw-r--r--   1 root supergroup        775 2026-11-07 18:57 /checkpoints/analytics_edit_count_recovery/offsets/8
+-rw-r--r--   1 root supergroup        775 2026-11-07 18:57 /checkpoints/analytics_edit_count_recovery/offsets/9
+--- nội dung file offsets mới nhất ---
+v1
+{"batchWatermarkMs":1794078239821,"batchTimestampMs":1794078310007,"conf":{"spark.sql.streaming.stateStore.providerClass":"org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider","spark.sql.streaming.join.stateFormatVersion":"2","spark.sql.streaming.stateStore.compression.codec":"lz4","spark.sql.optimizer.pruneFiltersCanPruneStreamingSubplan":"false","spark.sql.streaming.stateStore.rocksdb.formatVersion":"5","spark.sql.streaming.statefulOperator.useStrictDistribution":"true","spark.sql.streaming.flatMapGroupsWithState.stateFormatVersion":"2","spark.sql.streaming.multipleWatermarkPolicy":"min","spark.sql.streaming.aggregation.stateFormatVersion":"2","spark.sql.shuffle.partitions":"3"}}
+{"wikipedia-recent-changes":{"2":17869,"1":18217,"0":20152}}--- commits ---
+/checkpoints/analytics_edit_count_recovery/commits/7
+/checkpoints/analytics_edit_count_recovery/commits/8
+/checkpoints/analytics_edit_count_recovery/commits/9

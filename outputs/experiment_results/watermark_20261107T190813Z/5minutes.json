@@ -1,0 +1,1285 @@
+{
+  "config": {
+    "watermark": "5 minutes",
+    "metrics": [
+      "edit_count"
+    ],
+    "trigger": "10 seconds",
+    "starting_offsets": "earliest",
+    "source_topic": "wikipedia-replay",
+    "max_offsets_per_trigger": "2000",
+    "spike_min_edits": 10,
+    "spike_min_distinct_users": 0,
+    "counted_types": "all"
+  },
+  "summary": {
+    "batches": 12,
+    "input_rows": 20000,
+    "rows_dropped_by_watermark": 0,
+    "max_state_rows": 488,
+    "max_state_bytes": 176188,
+    "batch_ms_p50": 1400,
+    "batch_ms_p95": 2269,
+    "last_watermark": "2026-11-07T18:43:25.770Z"
+  },
+  "batches": [
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:16:16.769Z",
+      "batchId": 0,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 0.0,
+      "processedRowsPerSecond": 293.9532146535236,
+      "durationMs": {
+        "addBatch": 4866,
+        "commitOffsets": 48,
+        "getBatch": 44,
+        "latestOffset": 1124,
+        "queryPlanning": 620,
+        "triggerExecution": 6796,
+        "walCommit": 48
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:39:13.453Z",
+        "max": "2026-11-07T18:40:27.152Z",
+        "min": "2026-11-07T18:38:18.824Z",
+        "watermark": "1970-01-01T00:00:00.000Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 168,
+          "numRowsUpdated": 168,
+          "allUpdatesTimeMs": 135,
+          "numRowsRemoved": 0,
+          "allRemovalsTimeMs": 264,
+          "commitTimeMs": 930,
+          "memoryUsedBytes": 12311,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 7040,
+            "rocksdbCommitCheckpointLatency": 75,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 706,
+            "rocksdbCommitFlushLatency": 139,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 0,
+            "rocksdbGetCount": 336,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 168,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 0,
+            "rocksdbReadBlockCacheMissCount": 0,
+            "rocksdbSstFileSize": 7040,
+            "rocksdbTotalBytesRead": 0,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 14216,
+            "rocksdbTotalBytesWritten": 16736,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 7724,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 22641
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": null,
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 676,
+              "1": 655,
+              "0": 667
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 0.0,
+          "processedRowsPerSecond": 293.9532146535236,
+          "metrics": {
+            "avgOffsetsBehindLatest": "6000.666666666667",
+            "maxOffsetsBehindLatest": "6090",
+            "minOffsetsBehindLatest": "5902"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:16:23.594Z",
+      "batchId": 1,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 292.74725274725273,
+      "processedRowsPerSecond": 998.0019980019981,
+      "durationMs": {
+        "addBatch": 1799,
+        "commitOffsets": 74,
+        "getBatch": 0,
+        "latestOffset": 7,
+        "queryPlanning": 82,
+        "triggerExecution": 2002,
+        "walCommit": 34
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:39:24.533Z",
+        "max": "2026-11-07T18:40:40.110Z",
+        "min": "2026-11-07T18:38:18.989Z",
+        "watermark": "2026-11-07T18:35:27.152Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 207,
+          "numRowsUpdated": 157,
+          "allUpdatesTimeMs": 52,
+          "numRowsRemoved": 0,
+          "allRemovalsTimeMs": 105,
+          "commitTimeMs": 840,
+          "memoryUsedBytes": 27806,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 6968,
+            "rocksdbCommitCheckpointLatency": 80,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 675,
+            "rocksdbCommitFlushLatency": 81,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 3,
+            "rocksdbGetCount": 314,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 157,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 236,
+            "rocksdbReadBlockCacheMissCount": 3,
+            "rocksdbSstFileSize": 14008,
+            "rocksdbTotalBytesRead": 5900,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 17550,
+            "rocksdbTotalBytesWritten": 15693,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 7668,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 23644
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 676,
+              "1": 655,
+              "0": 667
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 1352,
+              "1": 1310,
+              "0": 1334
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 292.74725274725273,
+          "processedRowsPerSecond": 998.0019980019981,
+          "metrics": {
+            "avgOffsetsBehindLatest": "5334.666666666667",
+            "maxOffsetsBehindLatest": "5414",
+            "minOffsetsBehindLatest": "5247"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:16:30.000Z",
+      "batchId": 2,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 311.8950983453013,
+      "processedRowsPerSecond": 1696.0950764006793,
+      "durationMs": {
+        "addBatch": 1015,
+        "commitOffsets": 43,
+        "getBatch": 0,
+        "latestOffset": 8,
+        "queryPlanning": 45,
+        "triggerExecution": 1177,
+        "walCommit": 64
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:41:05.491Z",
+        "max": "2026-11-07T18:42:29.999Z",
+        "min": "2026-11-07T18:39:24.444Z",
+        "watermark": "2026-11-07T18:35:40.110Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 303,
+          "numRowsUpdated": 169,
+          "allUpdatesTimeMs": 21,
+          "numRowsRemoved": 0,
+          "allRemovalsTimeMs": 56,
+          "commitTimeMs": 430,
+          "memoryUsedBytes": 42821,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 7233,
+            "rocksdbCommitCheckpointLatency": 87,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 262,
+            "rocksdbCommitFlushLatency": 77,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 6,
+            "rocksdbGetCount": 338,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 169,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 149,
+            "rocksdbReadBlockCacheMissCount": 3,
+            "rocksdbSstFileSize": 21241,
+            "rocksdbTotalBytesRead": 3650,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 25670,
+            "rocksdbTotalBytesWritten": 16849,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 7934,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 24602
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 1352,
+              "1": 1310,
+              "0": 1334
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 2028,
+              "1": 1965,
+              "0": 2001
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 311.8950983453013,
+          "processedRowsPerSecond": 1696.0950764006793,
+          "metrics": {
+            "avgOffsetsBehindLatest": "4668.666666666667",
+            "maxOffsetsBehindLatest": "4738",
+            "minOffsetsBehindLatest": "4592"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:16:40.000Z",
+      "batchId": 3,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.8,
+      "processedRowsPerSecond": 1391.3649025069637,
+      "durationMs": {
+        "addBatch": 1259,
+        "commitOffsets": 39,
+        "getBatch": 1,
+        "latestOffset": 7,
+        "queryPlanning": 93,
+        "triggerExecution": 1436,
+        "walCommit": 34
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:41:42.823Z",
+        "max": "2026-11-07T18:43:10.415Z",
+        "min": "2026-11-07T18:40:33.412Z",
+        "watermark": "2026-11-07T18:37:29.999Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 369,
+          "numRowsUpdated": 178,
+          "allUpdatesTimeMs": 18,
+          "numRowsRemoved": 0,
+          "allRemovalsTimeMs": 66,
+          "commitTimeMs": 783,
+          "memoryUsedBytes": 41231,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 7452,
+            "rocksdbCommitCheckpointLatency": 110,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 573,
+            "rocksdbCommitFlushLatency": 95,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 9,
+            "rocksdbGetCount": 356,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 178,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 239,
+            "rocksdbReadBlockCacheMissCount": 6,
+            "rocksdbSstFileSize": 9239,
+            "rocksdbTotalBytesRead": 5600,
+            "rocksdbTotalBytesReadByCompaction": 7728,
+            "rocksdbTotalBytesReadThroughIterator": 31266,
+            "rocksdbTotalBytesWritten": 17722,
+            "rocksdbTotalBytesWrittenByCompaction": 9239,
+            "rocksdbTotalBytesWrittenByFlush": 8148,
+            "rocksdbTotalCompactionLatencyMs": 34,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 25554
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 2028,
+              "1": 1965,
+              "0": 2001
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 2704,
+              "1": 2620,
+              "0": 2668
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.8,
+          "processedRowsPerSecond": 1391.3649025069637,
+          "metrics": {
+            "avgOffsetsBehindLatest": "4002.6666666666665",
+            "maxOffsetsBehindLatest": "4062",
+            "minOffsetsBehindLatest": "3937"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:16:50.000Z",
+      "batchId": 4,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.8,
+      "processedRowsPerSecond": 1427.1428571428573,
+      "durationMs": {
+        "addBatch": 1291,
+        "commitOffsets": 39,
+        "getBatch": 0,
+        "latestOffset": 9,
+        "queryPlanning": 32,
+        "triggerExecution": 1400,
+        "walCommit": 27
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:42:47.695Z",
+        "max": "2026-11-07T18:44:12.621Z",
+        "min": "2026-11-07T18:41:06.777Z",
+        "watermark": "2026-11-07T18:38:10.415Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 443,
+          "numRowsUpdated": 175,
+          "allUpdatesTimeMs": 10,
+          "numRowsRemoved": 0,
+          "allRemovalsTimeMs": 34,
+          "commitTimeMs": 778,
+          "memoryUsedBytes": 57430,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 16539,
+            "rocksdbCommitCheckpointLatency": 67,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 618,
+            "rocksdbCommitFlushLatency": 88,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 6,
+            "rocksdbFilesReused": 0,
+            "rocksdbGetCount": 350,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 175,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 217,
+            "rocksdbReadBlockCacheMissCount": 3,
+            "rocksdbSstFileSize": 16539,
+            "rocksdbTotalBytesRead": 5050,
+            "rocksdbTotalBytesReadByCompaction": 4043,
+            "rocksdbTotalBytesReadThroughIterator": 37534,
+            "rocksdbTotalBytesWritten": 17439,
+            "rocksdbTotalBytesWrittenByCompaction": 9239,
+            "rocksdbTotalBytesWrittenByFlush": 7996,
+            "rocksdbTotalCompactionLatencyMs": 20,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 26152
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 2704,
+              "1": 2620,
+              "0": 2668
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 3380,
+              "1": 3275,
+              "0": 3335
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.8,
+          "processedRowsPerSecond": 1427.1428571428573,
+          "metrics": {
+            "avgOffsetsBehindLatest": "3336.6666666666665",
+            "maxOffsetsBehindLatest": "3386",
+            "minOffsetsBehindLatest": "3282"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:17:00.000Z",
+      "batchId": 5,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.8,
+      "processedRowsPerSecond": 1526.3559969442324,
+      "durationMs": {
+        "addBatch": 1105,
+        "commitOffsets": 36,
+        "getBatch": 0,
+        "latestOffset": 6,
+        "queryPlanning": 61,
+        "triggerExecution": 1309,
+        "walCommit": 99
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:44:11.389Z",
+        "max": "2026-11-07T18:45:14.786Z",
+        "min": "2026-11-07T18:42:55.554Z",
+        "watermark": "2026-11-07T18:39:12.621Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 445,
+          "numRowsUpdated": 147,
+          "allUpdatesTimeMs": 15,
+          "numRowsRemoved": 72,
+          "allRemovalsTimeMs": 72,
+          "commitTimeMs": 352,
+          "memoryUsedBytes": 94365,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 7691,
+            "rocksdbCommitCheckpointLatency": 95,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 163,
+            "rocksdbCommitFlushLatency": 90,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 6,
+            "rocksdbGetCount": 366,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 219,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 218,
+            "rocksdbReadBlockCacheMissCount": 9,
+            "rocksdbSstFileSize": 24230,
+            "rocksdbTotalBytesRead": 5450,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 43754,
+            "rocksdbTotalBytesWritten": 19907,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 8395,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 24618
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 3380,
+              "1": 3275,
+              "0": 3335
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 4056,
+              "1": 3930,
+              "0": 4002
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.8,
+          "processedRowsPerSecond": 1526.3559969442324,
+          "metrics": {
+            "avgOffsetsBehindLatest": "2670.6666666666665",
+            "maxOffsetsBehindLatest": "2710",
+            "minOffsetsBehindLatest": "2627"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 72
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:17:10.001Z",
+      "batchId": 6,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.78002199780022,
+      "processedRowsPerSecond": 1361.0354223433242,
+      "durationMs": {
+        "addBatch": 1378,
+        "commitOffsets": 35,
+        "getBatch": 1,
+        "latestOffset": 6,
+        "queryPlanning": 27,
+        "triggerExecution": 1468,
+        "walCommit": 20
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:44:25.302Z",
+        "max": "2026-11-07T18:45:23.634Z",
+        "min": "2026-11-07T18:43:04.133Z",
+        "watermark": "2026-11-07T18:40:14.786Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 412,
+          "numRowsUpdated": 147,
+          "allUpdatesTimeMs": 10,
+          "numRowsRemoved": 73,
+          "allRemovalsTimeMs": 37,
+          "commitTimeMs": 1081,
+          "memoryUsedBytes": 110996,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 7638,
+            "rocksdbCommitCheckpointLatency": 76,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 932,
+            "rocksdbCommitFlushLatency": 69,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 9,
+            "rocksdbGetCount": 367,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 220,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 296,
+            "rocksdbReadBlockCacheMissCount": 3,
+            "rocksdbSstFileSize": 31868,
+            "rocksdbTotalBytesRead": 7175,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 41010,
+            "rocksdbTotalBytesWritten": 19914,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 8342,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 25571
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 4056,
+              "1": 3930,
+              "0": 4002
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 4732,
+              "1": 4585,
+              "0": 4669
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.78002199780022,
+          "processedRowsPerSecond": 1361.0354223433242,
+          "metrics": {
+            "avgOffsetsBehindLatest": "2004.6666666666667",
+            "maxOffsetsBehindLatest": "2034",
+            "minOffsetsBehindLatest": "1972"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 73
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:17:20.000Z",
+      "batchId": 7,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.8199819981998,
+      "processedRowsPerSecond": 2424.757281553398,
+      "durationMs": {
+        "addBatch": 723,
+        "commitOffsets": 38,
+        "getBatch": 1,
+        "latestOffset": 7,
+        "queryPlanning": 30,
+        "triggerExecution": 824,
+        "walCommit": 24
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:45:58.403Z",
+        "max": "2026-11-07T18:46:55.452Z",
+        "min": "2026-11-07T18:45:14.588Z",
+        "watermark": "2026-11-07T18:40:23.634Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 488,
+          "numRowsUpdated": 112,
+          "allUpdatesTimeMs": 12,
+          "numRowsRemoved": 0,
+          "allRemovalsTimeMs": 42,
+          "commitTimeMs": 351,
+          "memoryUsedBytes": 103823,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 5925,
+            "rocksdbCommitCheckpointLatency": 103,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 176,
+            "rocksdbCommitFlushLatency": 68,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 12,
+            "rocksdbGetCount": 224,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 112,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 101,
+            "rocksdbReadBlockCacheMissCount": 6,
+            "rocksdbSstFileSize": 11319,
+            "rocksdbTotalBytesRead": 1800,
+            "rocksdbTotalBytesReadByCompaction": 6677,
+            "rocksdbTotalBytesReadThroughIterator": 41264,
+            "rocksdbTotalBytesWritten": 11120,
+            "rocksdbTotalBytesWrittenByCompaction": 11319,
+            "rocksdbTotalBytesWrittenByFlush": 6621,
+            "rocksdbTotalCompactionLatencyMs": 24,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 26516
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 4732,
+              "1": 4585,
+              "0": 4669
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 5408,
+              "1": 5240,
+              "0": 5336
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.8199819981998,
+          "processedRowsPerSecond": 2424.757281553398,
+          "metrics": {
+            "avgOffsetsBehindLatest": "1338.6666666666667",
+            "maxOffsetsBehindLatest": "1358",
+            "minOffsetsBehindLatest": "1317"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:17:30.000Z",
+      "batchId": 8,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.8,
+      "processedRowsPerSecond": 1645.7990115321252,
+      "durationMs": {
+        "addBatch": 1082,
+        "commitOffsets": 43,
+        "getBatch": 0,
+        "latestOffset": 5,
+        "queryPlanning": 54,
+        "triggerExecution": 1214,
+        "walCommit": 28
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:46:32.019Z",
+        "max": "2026-11-07T18:47:25.073Z",
+        "min": "2026-11-07T18:45:13.677Z",
+        "watermark": "2026-11-07T18:41:55.452Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 478,
+          "numRowsUpdated": 146,
+          "allUpdatesTimeMs": 13,
+          "numRowsRemoved": 76,
+          "allRemovalsTimeMs": 38,
+          "commitTimeMs": 836,
+          "memoryUsedBytes": 124838,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 19132,
+            "rocksdbCommitCheckpointLatency": 84,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 648,
+            "rocksdbCommitFlushLatency": 100,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 6,
+            "rocksdbFilesReused": 0,
+            "rocksdbGetCount": 368,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 222,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 259,
+            "rocksdbReadBlockCacheMissCount": 5,
+            "rocksdbSstFileSize": 19132,
+            "rocksdbTotalBytesRead": 5900,
+            "rocksdbTotalBytesReadByCompaction": 4321,
+            "rocksdbTotalBytesReadThroughIterator": 46836,
+            "rocksdbTotalBytesWritten": 20150,
+            "rocksdbTotalBytesWrittenByCompaction": 11319,
+            "rocksdbTotalBytesWrittenByFlush": 8517,
+            "rocksdbTotalCompactionLatencyMs": 22,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 26778
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 5408,
+              "1": 5240,
+              "0": 5336
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 6084,
+              "1": 5895,
+              "0": 6003
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.8,
+          "processedRowsPerSecond": 1645.7990115321252,
+          "metrics": {
+            "avgOffsetsBehindLatest": "672.6666666666666",
+            "maxOffsetsBehindLatest": "682",
+            "minOffsetsBehindLatest": "662"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 76
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:17:40.000Z",
+      "batchId": 9,
+      "numInputRows": 1998,
+      "inputRowsPerSecond": 199.8,
+      "processedRowsPerSecond": 880.564125165271,
+      "durationMs": {
+        "addBatch": 1760,
+        "commitOffsets": 439,
+        "getBatch": 0,
+        "latestOffset": 4,
+        "queryPlanning": 39,
+        "triggerExecution": 2269,
+        "walCommit": 25
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:47:39.468Z",
+        "max": "2026-11-07T18:48:25.770Z",
+        "min": "2026-11-07T18:46:34.035Z",
+        "watermark": "2026-11-07T18:42:25.073Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 478,
+          "numRowsUpdated": 130,
+          "allUpdatesTimeMs": 8,
+          "numRowsRemoved": 71,
+          "allRemovalsTimeMs": 36,
+          "commitTimeMs": 302,
+          "memoryUsedBytes": 160757,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 7469,
+            "rocksdbCommitCheckpointLatency": 73,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 138,
+            "rocksdbCommitFlushLatency": 87,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 6,
+            "rocksdbGetCount": 331,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 201,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 191,
+            "rocksdbReadBlockCacheMissCount": 10,
+            "rocksdbSstFileSize": 26601,
+            "rocksdbTotalBytesRead": 4725,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 46442,
+            "rocksdbTotalBytesWritten": 18203,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 8173,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 24618
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 6084,
+              "1": 5895,
+              "0": 6003
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 6759,
+              "1": 6551,
+              "0": 6670
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 1998,
+          "inputRowsPerSecond": 199.8,
+          "processedRowsPerSecond": 880.564125165271,
+          "metrics": {
+            "avgOffsetsBehindLatest": "6.666666666666667",
+            "maxOffsetsBehindLatest": "7",
+            "minOffsetsBehindLatest": "6"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 71
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:17:50.000Z",
+      "batchId": 10,
+      "numInputRows": 20,
+      "inputRowsPerSecond": 2.0,
+      "processedRowsPerSecond": 29.49852507374631,
+      "durationMs": {
+        "addBatch": 578,
+        "commitOffsets": 45,
+        "getBatch": 0,
+        "latestOffset": 8,
+        "queryPlanning": 23,
+        "triggerExecution": 678,
+        "walCommit": 20
+      },
+      "eventTime": {
+        "avg": "2026-11-07T18:48:14.315Z",
+        "max": "2026-11-07T18:48:16.002Z",
+        "min": "2026-11-07T18:48:12.627Z",
+        "watermark": "2026-11-07T18:43:25.770Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 401,
+          "numRowsUpdated": 8,
+          "allUpdatesTimeMs": 6,
+          "numRowsRemoved": 78,
+          "allRemovalsTimeMs": 34,
+          "commitTimeMs": 295,
+          "memoryUsedBytes": 176188,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 4952,
+            "rocksdbCommitCheckpointLatency": 78,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 137,
+            "rocksdbCommitFlushLatency": 75,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 9,
+            "rocksdbGetCount": 94,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 86,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 104,
+            "rocksdbReadBlockCacheMissCount": 3,
+            "rocksdbSstFileSize": 31553,
+            "rocksdbTotalBytesRead": 2300,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 40518,
+            "rocksdbTotalBytesWritten": 6570,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 5648,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 25563
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 6759,
+              "1": 6551,
+              "0": 6670
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 20,
+          "inputRowsPerSecond": 2.0,
+          "processedRowsPerSecond": 29.49852507374631,
+          "metrics": {
+            "avgOffsetsBehindLatest": "0.0",
+            "maxOffsetsBehindLatest": "0",
+            "minOffsetsBehindLatest": "0"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 78
+      }
+    },
+    {
+      "id": "e5672f63-f43d-4a4d-9a87-f887256eb1b1",
+      "runId": "1f749f87-5c50-46ac-8c88-e0adcf0f518f",
+      "name": "analytics_edit_count_wm_5minutes_20261107T190813Z",
+      "timestamp": "2026-11-07T19:18:10.000Z",
+      "batchId": 11,
+      "numInputRows": 0,
+      "inputRowsPerSecond": 0.0,
+      "processedRowsPerSecond": 0.0,
+      "durationMs": {
+        "latestOffset": 9,
+        "triggerExecution": 9
+      },
+      "eventTime": {
+        "watermark": "2026-11-07T18:43:25.770Z"
+      },
+      "stateOperators": [
+        {
+          "operatorName": "stateStoreSave",
+          "numRowsTotal": 401,
+          "numRowsUpdated": 0,
+          "allUpdatesTimeMs": 6,
+          "numRowsRemoved": 78,
+          "allRemovalsTimeMs": 34,
+          "commitTimeMs": 295,
+          "memoryUsedBytes": 176188,
+          "numRowsDroppedByWatermark": 0,
+          "numShufflePartitions": 3,
+          "numStateStoreInstances": 3,
+          "customMetrics": {
+            "rocksdbBytesCopied": 4952,
+            "rocksdbCommitCheckpointLatency": 78,
+            "rocksdbCommitCompactLatency": 0,
+            "rocksdbCommitFileSyncLatencyMs": 137,
+            "rocksdbCommitFlushLatency": 75,
+            "rocksdbCommitPauseLatency": 0,
+            "rocksdbCommitWriteBatchLatency": 0,
+            "rocksdbFilesCopied": 3,
+            "rocksdbFilesReused": 9,
+            "rocksdbGetCount": 94,
+            "rocksdbGetLatency": 0,
+            "rocksdbPinnedBlocksMemoryUsage": 264,
+            "rocksdbPutCount": 86,
+            "rocksdbPutLatency": 0,
+            "rocksdbReadBlockCacheHitCount": 104,
+            "rocksdbReadBlockCacheMissCount": 3,
+            "rocksdbSstFileSize": 31553,
+            "rocksdbTotalBytesRead": 2300,
+            "rocksdbTotalBytesReadByCompaction": 0,
+            "rocksdbTotalBytesReadThroughIterator": 40518,
+            "rocksdbTotalBytesWritten": 6570,
+            "rocksdbTotalBytesWrittenByCompaction": 0,
+            "rocksdbTotalBytesWrittenByFlush": 5648,
+            "rocksdbTotalCompactionLatencyMs": 0,
+            "rocksdbWriterStallLatencyMs": 0,
+            "rocksdbZipFileBytesUncompressed": 25563
+          }
+        }
+      ],
+      "sources": [
+        {
+          "description": "KafkaV2[Subscribe[wikipedia-replay]]",
+          "startOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "endOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "latestOffset": {
+            "wikipedia-replay": {
+              "2": 6766,
+              "1": 6557,
+              "0": 6677
+            }
+          },
+          "numInputRows": 0,
+          "inputRowsPerSecond": 0.0,
+          "processedRowsPerSecond": 0.0,
+          "metrics": {
+            "avgOffsetsBehindLatest": "0.0",
+            "maxOffsetsBehindLatest": "0",
+            "minOffsetsBehindLatest": "0"
+          }
+        }
+      ],
+      "sink": {
+        "description": "org.apache.spark.sql.kafka010.KafkaSourceProvider$KafkaTable@24ac59e",
+        "numOutputRows": 0
+      }
+    }
+  ]
+}

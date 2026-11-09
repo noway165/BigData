@@ -2,3 +2,8 @@
 .venv/
 __pycache__/
 .pytest_cache/
+
+# Mẫu replay của thí nghiệm watermark: 30 MB và sinh lại được bằng script.
+outputs/experiment_results/*/sample.jsonl
+# Log của job chạy ad-hoc, không phải bằng chứng thí nghiệm.
+outputs/*.log
