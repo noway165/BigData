@@ -81,6 +81,24 @@ assert "Tranh cãi &amp; bàn luận" in page
 assert "enwiki" in page and "55" in page
 assert "Human" in page and "80" in page
 
+# window_start cũng đến từ Kafka nên cũng phải escape, không chỉ riêng title. Hai nhánh của
+# _hhmm: chuỗi có 'T' bị cắt 5 ký tự, chuỗi không có 'T' đi nguyên văn ra pill ở header.
+hostile = new_state()
+update_state(hostile, {"metric": "edit_count", "wiki": "enwiki", "edit_count": 1,
+                       "window_start": "2026-11-08T<img src=x onerror=alert(1)>"})
+hostile_page = render_page(hostile, "12:00:00")
+assert "<img" not in hostile_page and "&lt;img" in hostile_page, hostile_page[:400]
+
+hostile2 = new_state()
+update_state(hostile2, {"metric": "bot_ratio", "window_start": "<script>alert(1)</script>",
+                        "total_events": 1, "bot_count": 1, "human_count": 0, "unknown_count": 0})
+assert "<script>alert(1)</script>" not in render_page(hostile2, "12:00:00")
+
+# Trang là shell + <noscript>: client lấy dữ liệu từ /api/state, không tải tài nguyên ngoài.
+assert "<noscript>" in page
+assert "/api/state" in page
+assert 'src="http' not in page and 'href="http' not in page
+
 # Trang rỗng vẫn render được và nói rõ vì sao chưa có gì.
 empty = render_page(new_state(), "12:00:00")
 assert "Chưa có window nào đóng" in empty
@@ -162,14 +180,45 @@ assert capped["log"][0]["title"] == f"t{LOG_LINES}" and "t0" not in [e["title"] 
 update_state(state, edit("frwiki", 11, 5, bots=9))
 assert state["wiki_split"]["frwiki"]["human_edits"] == 0, state["wiki_split"]["frwiki"]
 
+# recent_spikes phải đếm số bản ghi thật sự vượt ngưỡng. Dòng thật ~30 spike mỗi 30 giây, nên
+# 300 bản ghi là chuyện bình thường và KPI không được dừng ở bất kỳ cap nào của feed.
+burst = new_state()
+for i in range(300):
+    update_state(burst, spike(f"Trang {i}"))
+burst_json = state_json(burst, "12:00:00")
+assert burst_json["kpi"]["recent_spikes"] == 300, burst_json["kpi"]
+assert len(burst_json["spikes"]) == 12, len(burst_json["spikes"])  # feed vẫn chỉ hiện 12 cái mới nhất
+assert burst_json["spikes"][0]["title"] == "Trang 299", burst_json["spikes"][0]
+
+# Chỉ spike từ cutoff trở đi mới được đếm; cutoff là window timeline cũ nhất trong 10 cái gần nhất.
+old = new_state()
+for minute in range(9, 14):
+    update_state(old, {"metric": "activity_spike", "window_start": f"2026-11-08T10:{minute:02d}:00.000Z"})
+for minute in range(10, 14):
+    update_state(old, edit("enwiki", minute, 5))
+assert state_json(old, "12:00:00")["kpi"]["recent_spikes"] == 4, old["spike_counts"]  # bỏ cái 10:09
+
+# Tally cắt bớt window cũ nên không phình vô hạn dù chạy cả buổi.
+for minute in range(200):
+    update_state(old, {"metric": "activity_spike",
+                       "window_start": f"2026-11-08T{minute // 60:02d}:{minute % 60:02d}:00.000Z"})
+assert len(old["spike_counts"]) == 120, len(old["spike_counts"])
+
 # state_json: serialize được (deque thì không), đủ khóa, không lộ comment/tên gốc.
 payload = state_json(state, "12:00:00")
 assert set(payload) == {"kpi", "timeline", "wikis", "bot_history", "spikes", "log", "status"}
 assert json.dumps(payload)
 assert payload["kpi"]["total_records"] == state["total"]
 assert payload["log"][0]["title"] == "Second"
-assert all("comment" not in e for e in payload["log"])
 assert payload["status"]["last_window"] == state["last_window"]
+
+# Quyền riêng tư đi hết đường: một event thật có cả `comment` lẫn tên gốc, qua log_entry và
+# update_log, thì /api/state không được chứa chữ nào của hai thứ đó.
+update_log(state, log_entry(raw(user="Printstream", comment="toi vua sua lai cai bang"), WIKIS, KINDS))
+served = json.dumps(state_json(state, "12:00:00"), ensure_ascii=False)
+assert "Printstream" not in served
+assert "toi vua sua lai cai bang" not in served
+
 assert state_json(new_state(), "12:00:00")["kpi"]["emit_lag_seconds"] is None  # state rỗng không nổ
 
 print("DASHBOARD SELFCHECK OK")
