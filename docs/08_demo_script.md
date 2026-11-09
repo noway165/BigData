@@ -9,7 +9,7 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 | Tải sẵn jar connector vào cache Ivy | Chạy một lần `docker compose up -d && sh scripts/bootstrap.sh`, rồi `docker exec spark sh /opt/app/scripts/spark_analytics_selfcheck.sh`. Volume `spark_ivy` giữ jar, buổi demo không cần mạng để tải. |
 | Pull sẵn image | `docker compose pull` |
 | Chạy trước thí nghiệm watermark và recovery | Giữ nguyên thư mục trong `outputs/experiment_results/` để trình bày |
-| Mở sẵn tab | NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040`, Dashboard `http://localhost:8501` |
+| Mở sẵn tab | Dashboard Streamlit `http://localhost:8501`, Live feed `http://localhost:8080`, NameNode UI `http://localhost:9870`, Spark driver UI `http://localhost:4040`. Bật `livefeed` **sớm vài phút**: log của nó chỉ có event từ lúc nó khởi động (xem bước 5b). |
 | Build sẵn image Dashboard | `docker compose --profile dashboard build` (cần mạng để cài Streamlit) |
 | Lưu output analytics dự phòng | `sh scripts/capture_analytics.sh 5000` sau khi analytics đã chạy ~15 phút |
 | Chạy producer sớm 10–15 phút | Để HDFS đã có vài partition giờ và Kafka đã có dữ liệu |
@@ -17,6 +17,9 @@ Dành cho buổi bảo vệ. Chuẩn bị trước, demo trực tiếp phần pi
 ## Trình tự demo
 
 **1. Khởi động hạ tầng**
+
+Nhanh nhất là nhấp đúp `demo.bat` ở thư mục gốc: nó làm hết bước 1, 2, 4, bật luôn cả Dashboard Streamlit và Live feed rồi mở hai trang. Giữ cửa sổ đó mở suốt buổi; nó có menu: `R` mở lại các tab trình duyệt, `S` xem trạng thái container, `Q` rồi `Y` để tắt cả stack. Đóng cửa sổ bằng nút X thì không chạy bước tắt, container vẫn chạy.
+Muốn vừa chạy vừa giải thích từng bước thì gõ tay:
 
 ```bash
 docker compose up -d
@@ -66,7 +69,7 @@ Chỉ ra ba metric trên cùng một topic, biên window theo event time, và `t
 docker compose --profile dashboard up -d
 ```
 
-Mở `http://localhost:8501`. Chỉ lần lượt:
+Dashboard Streamlit (service `dashboard`, chỉ đọc topic `wikipedia-analytics`) ở `http://localhost:8501`. Chỉ lần lượt:
 
 1. Hàng chỉ số trên cùng: số event của window 1 phút mới nhất, so với phút trước. Nhấn mạnh window theo **event time** và chỉ phát khi đã đóng, nên số liệu chậm hơn đồng hồ khoảng 2–3 phút — đó là cái giá của watermark 1 phút.
 2. Biểu đồ số event mỗi phút, tách Bot / Human + Unknown; Top wiki (thường là `commonswiki`, `wikidatawiki`, `enwiki`).
@@ -77,6 +80,16 @@ Mở `http://localhost:8501`. Chỉ lần lượt:
 Sau bước 6 (recovery), quay lại khung này: số "bản ghi lặp đã khử" có thể tăng — đó là at-least-once của Kafka sink, Dashboard đã xử lý.
 
 Dự phòng nếu Kafka/Spark trục trặc: `ANALYTICS_SOURCE_FILE=outputs/experiment_results/analytics_capture.jsonl streamlit run src/dashboard/app.py` (file lưu trước bằng `sh scripts/capture_analytics.sh 5000`).
+
+**5b. Live feed (`http://localhost:8080`)**
+
+Đây là trang thứ hai, không thay Dashboard Streamlit: service `livefeed` ở cổng 8080, chạy từ `src/dashboard/dashboard.py`. Cùng profile `dashboard`, nên lệnh ở bước 5 bật luôn cả hai. Trang này đọc **cả hai** topic: số liệu tổng hợp từ `wikipedia-analytics`, và log từng lượt sửa từ topic raw `wikipedia-recent-changes`.
+
+Chỉ ra: hàng chỉ số cỡ lớn, hai biểu đồ SVG, và **log trực tiếp** — mỗi dòng là một lượt sửa thật với giờ, người sửa (đã che: `Printstream` thành `Pri***`, IP `171.224.3.9` thành `171.224.*.*`; bot có nhãn Bot), loại thay đổi (**Chỉnh sửa bài** hoặc **Thêm bài mới**), tên bài và số byte thay đổi. Log chỉ lấy `type` `edit` và `new`, lọc `enwiki` và `viwiki` để đọc kịp; toàn bộ luồng là khoảng 36 sự kiện mỗi giây. Trang không hiện `comment` của lượt sửa: đó là văn bản tự do của người lạ mà màn chiếu thì cả lớp nhìn thấy. Nếu bị hỏi về quyền riêng tư, xem mục Riêng tư ở [03_data_contract.md](03_data_contract.md).
+
+Trang không reload: trình duyệt gọi `/api/state` mỗi 2 giây rồi cập nhật DOM nên không nháy và không nhảy về đầu trang; nếu tắt JavaScript thì `<noscript>` vẫn hiện bản render sẵn từ server. Không tải tài nguyên ngoài nào, mất mạng vẫn hiện.
+
+Các khối số liệu có dữ liệu ngay khi mở trang (consumer analytics đọc từ `earliest`, group id mới mỗi lần khởi động). Riêng **log chỉ có sự kiện từ lúc consumer raw của `livefeed` bắt đầu** (đọc từ `latest`, không phát lại topic), và giữ tối đa 60 dòng mới nhất (`DASHBOARD_LOG_LINES`). Tức là log đầy dần từ lúc service khởi động, nên khởi động stack sớm vài phút; khởi động rồi nói ngay thì log trống hoặc ngắn. Khởi động lại `livefeed` thì log mất sạch và bắt đầu lại.
 
 **6. Crash recovery**
 
@@ -108,6 +121,8 @@ Latency p50/p95 ([latency_report.md](../outputs/experiment_results/latency_repor
 | Submit hai job cùng lúc khi cache Ivy còn trống | Hai tiến trình `spark-submit` cùng resolve một package có thể chặn nhau và job treo không ghi gì. Submit job đầu, chờ nó chạy, rồi submit job thứ hai. Luôn redirect log (`> /opt/app/outputs/<ten>.log 2>&1`) để nhìn thấy khi nó treo. |
 | `spark-submit` treo ở bước tải package | Jar đã nằm trong volume `spark_ivy`; kiểm tra `docker exec spark ls /tmp/ivy/jars`. Thiếu thì chạy lại một job trước đó để nạp cache. |
 | Query lỗi ghi HDFS | Kiểm tra namenode còn sống: `docker exec namenode hdfs dfsadmin -report`. |
+| Dashboard trống | Topic chưa có message nào, xem dòng dưới. Nếu topic có dữ liệu mà trang vẫn trống thì xem `docker logs dashboard` (Streamlit) hoặc `docker logs livefeed` (Live feed). |
+| Log Live feed trống | Bình thường nếu `livefeed` vừa khởi động: log chỉ có event từ lúc đó. Chờ vài chục giây; vẫn trống thì xem `docker logs livefeed` và `docker logs producer`. |
 | Topic analytics rỗng | Window chưa đóng. `outputMode("append")` chỉ phát khi window đóng, nên phải chờ qua `window + watermark`. |
 | Producer không gửi | `docker logs producer`: nếu `reconnects` tăng liên tục thì là mạng hoặc rate limit của Wikimedia. |
 | Hết RAM | Dừng nhánh raw (`docker exec spark pkill -f raw_to_hdfs.py`), demo nhánh analytics; hoặc giảm `ANALYTICS_METRICS` xuống một metric. |

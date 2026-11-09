@@ -67,6 +67,7 @@ Khảo sát 1.882 event thật trong 60 giây ngày 2026-11-08, bằng [`scripts
 - **Canary:** event có `meta.domain = "canary"` là event giám sát của Wikimedia. Producer bỏ qua và đếm ở `canary_skipped`.
 - **Trùng lặp:** kiểm tra theo `event_id`. Có thể xuất hiện trùng khi resume SSE (xem [07_ingestion.md](07_ingestion.md)).
 - **Riêng tư:** `user` có trong raw để đếm `distinct_users`. Không đưa tên tài khoản lên Dashboard.
+- **Log của Live feed:** log từng lượt sửa ở trang Live feed (`src/dashboard/dashboard.py`) chỉ hiện tên đã che, không hiện tên thật, nên không trái quy tắc trên. Che nghĩa là: IPv4 giữ hai nhóm đầu (`171.224.3.9` thành `171.224.*.*`); IPv6 giữ hai nhóm đầu; tên tài khoản giữ 3 ký tự đầu (`Printstream` thành `Pri***`), tên từ 3 ký tự trở xuống giữ 1 ký tự rồi thêm `***`; thiếu tên hiện `ẩn danh`. Log cũng không bao giờ hiện trường `comment` vì đó là văn bản tự do của người lạ và trang được chiếu trước lớp. Các khối tổng hợp không chứa tên người dùng. Che chỉ giảm nhận diện, không phải ẩn danh hóa: tên trong raw và Parquet vẫn là tên thật.
 
 ## 5. Raw Parquet trên HDFS
 

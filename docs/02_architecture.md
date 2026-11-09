@@ -16,22 +16,27 @@ Python SSE Producer                 (src/producer/sse_kafka_producer.py)
           v
 Kafka topic: wikipedia-recent-changes   3 partition, retention 24 giờ
           |
-          +-------------------------------+
-          |                               |
-          v                               v
-Query raw_to_hdfs                   Query analytics (3 query con)
- append, trigger 30 giây             event-time window + watermark
+          +-------------------------------+-----------------------+
+          |                               |                       |
+          v                               v                       |
+Query raw_to_hdfs                   Query analytics (3 query con) |
+ append, trigger 30 giây             event-time window + watermark|
  checkpoint riêng                    checkpoint riêng cho từng query
-          |                               |
-          v                               v
+          |                               |                       |
+          v                               v                       |
 HDFS Parquet                        Kafka topic: wikipedia-analytics
 /data/raw/recent_changes/            edit_count, bot_ratio, activity_spike
-year=/month=/day=/hour=                     |
-          |                                 v
-          v                           Streamlit Dashboard
-quality_report.py (batch)
- chất lượng dữ liệu + 3 loại latency
+year=/month=/day=/hour=                     |                     |
+          |                         +-------+-------+             |
+          v                         |               |             |
+quality_report.py (batch)           v               v             |
+ chất lượng dữ liệu + 3 loại   Dashboard Streamlit  Live feed <----+
+ latency                        (app.py, :8501)     (dashboard.py, :8080)
+                                chỉ đọc analytics   đọc analytics (mọi khối số liệu)
+                                                    + raw (chỉ cho log, từ latest)
 ```
+
+Hai trang hiển thị chạy song song, không trang nào thay trang nào: Dashboard Streamlit là service `dashboard`, Live feed là service `livefeed`, cùng profile `dashboard` nên một lệnh bật cả hai.
 
 Mọi dịch vụ chạy trong `docker-compose.yml` trên một network `wiki-net`.
 
@@ -40,10 +45,11 @@ Mọi dịch vụ chạy trong `docker-compose.yml` trên một network `wiki-ne
 | Quyết định | Lý do | Đánh đổi |
 |---|---|---|
 | Kafka nằm giữa producer và Spark | Spark chết thì producer vẫn gửi; Spark bật lại đọc tiếp từ offset trong checkpoint. Đây chính là điều kiện để bài test recovery có ý nghĩa. | Thêm một dịch vụ và một nguồn tiêu thụ RAM |
-| Raw và Analytics là hai nhánh query riêng, đọc cùng một topic | Dashboard không phải quét lại raw; lỗi ở một nhánh không làm nhánh kia dừng | Dữ liệu được đọc từ Kafka hai lần |
+| Raw và Analytics là hai nhánh query riêng, đọc cùng một topic | Dashboard Streamlit không phải quét lại raw; lỗi ở một nhánh không làm nhánh kia dừng | Dữ liệu được đọc từ Kafka hai lần |
 | Mỗi streaming query một `checkpointLocation` riêng | Checkpoint lưu offset và state của riêng query đó. Dùng chung sẽ làm hai query ghi đè tiến độ của nhau. | Nhiều thư mục checkpoint phải quản lý |
 | Checkpoint đặt trên HDFS (`hdfs://namenode:8020/checkpoints/...`) | Bền vững qua việc xóa và tạo lại container. Checkpoint trong filesystem container sẽ mất, và bài test recovery sẽ vô nghĩa. | Phụ thuộc HDFS phải sống trước khi submit job |
-| Analytics output đi qua Kafka topic thay vì database | Không thêm thành phần mới; Spark và Streamlit tích hợp độc lập qua một hợp đồng JSON | Topic không phục vụ truy vấn lịch sử; Dashboard phải tự giữ state hiển thị |
+| Analytics output đi qua Kafka topic thay vì database | Không thêm thành phần mới; Spark và Dashboard tích hợp độc lập qua một hợp đồng JSON | Topic không phục vụ truy vấn lịch sử; Dashboard phải tự giữ state hiển thị |
+| Live feed đọc thêm topic raw, chỉ để dựng log từng lượt sửa; mọi khối tổng hợp vẫn đọc từ topic analytics | Topic analytics chỉ có số tổng hợp, không có từng event nên không dựng được log. Consumer raw của Live feed đặt `auto.offset.reset=latest`: nó chỉ cần event mới, không cần phát lại 24 giờ retention để chọn ra vài dòng. Consumer analytics vẫn `earliest` với group id mới, nên các khối số liệu có dữ liệu ngay khi mở trang. | Log không có lịch sử: chỉ chứa event từ lúc service `livefeed` khởi động, nên phải bật sớm trước khi trình bày. Thêm một consumer đọc toàn bộ luồng raw (khoảng 36 event mỗi giây, lọc xuống `enwiki`, `viwiki`) |
 | `outputMode("append")` cho cả ba metric | Có watermark thì mỗi window chỉ phát một lần khi đóng, nên Dashboard không phải lọc bản ghi lặp của cùng một window | Chỉ thấy kết quả sau khi window đóng, nên trễ hơn `update` |
 | Spark chạy `local[2]` trong một container | Máy test chỉ còn khoảng 3,7 GB cho container, thêm master và worker daemon sẽ lấy RAM của Kafka và HDFS | Không minh họa được phân phối task nhiều executor |
 | `failOnDataLoss=false` ở Kafka source | Retention 24 giờ có thể xóa offset cũ trong lúc query đang chết. Query phải chạy tiếp thay vì tắt. | Nếu mất dữ liệu thật thì chỉ có cảnh báo trong log |
@@ -103,6 +109,8 @@ Không tuyên bố exactly-once cho toàn pipeline. Từng chặng khác nhau:
 | Dịch vụ | Trong network docker | Từ máy host |
 |---|---|---|
 | Kafka | `kafka:9092` | `localhost:9094` |
+| Dashboard Streamlit (`dashboard`) | — | `localhost:8501` |
+| Live feed (`livefeed`) | — | `localhost:8080` (`LIVEFEED_PORT`) |
 | HDFS NameNode RPC | `namenode:8020` | — |
 | HDFS NameNode UI | `namenode:9870` | `localhost:9870` |
 | Spark driver UI | `spark:4040` | `localhost:4040` khi có job đang chạy |
@@ -113,5 +121,5 @@ Không tuyên bố exactly-once cho toàn pipeline. Từng chặng khác nhau:
 
 - Một broker Kafka, một DataNode, replication 1. Không chứng minh được high availability.
 - Spark `local[2]`: không có phân phối task nhiều node, nên số throughput đo được là của một máy.
-- Hai nhánh query đọc Kafka độc lập, nên tổng lượng đọc gấp đôi lượng dữ liệu vào.
+- Hai nhánh query đọc Kafka độc lập, nên tổng lượng đọc gấp đôi lượng dữ liệu vào. Live feed còn đọc topic raw một lần nữa cho log.
 - `spark_processed_at` dùng `current_timestamp()`, nên mọi dòng trong một micro-batch có cùng giá trị. Latency producer-to-processing vì vậy phụ thuộc độ dài trigger.

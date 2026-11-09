@@ -128,6 +128,7 @@ services:
         condition: service_healthy
     networks: [wiki-net]
 
+  # Dashboard Streamlit của Khoa: đọc topic analytics đã tổng hợp.
   dashboard:
     build:
       context: .
@@ -142,6 +143,35 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_ANALYTICS_TOPIC: ${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}
       DASHBOARD_REFRESH_S: ${DASHBOARD_REFRESH_S:-5}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [wiki-net]
+
+  # Trang live feed: cùng profile `dashboard` nên một lệnh bật cả hai, khác cổng.
+  # Dùng lại image của producer (python 3.12 + confluent-kafka) nên không thêm
+  # image, dependency hay bước build nào.
+  livefeed:
+    build:
+      context: .
+      dockerfile: src/producer/Dockerfile
+    image: wikipedia-sse-producer
+    container_name: livefeed
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    command: ["python", "-u", "/opt/app/src/dashboard/dashboard.py"]
+    ports:
+      - "${LIVEFEED_PORT:-8080}:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_ANALYTICS_TOPIC: ${KAFKA_ANALYTICS_TOPIC:-wikipedia-analytics}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-wikipedia-recent-changes}
+      DASHBOARD_REFRESH_S: ${DASHBOARD_REFRESH_S:-5}
+      DASHBOARD_LOG_WIKIS: ${DASHBOARD_LOG_WIKIS:-enwiki,viwiki}
+      DASHBOARD_LOG_LINES: ${DASHBOARD_LOG_LINES:-60}
+      DISPLAY_UTC_OFFSET: ${DISPLAY_UTC_OFFSET:-7}
+    volumes:
+      - .:/opt/app:ro
     depends_on:
       kafka:
         condition: service_healthy
