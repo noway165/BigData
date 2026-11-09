@@ -33,6 +33,7 @@ import analytics_view as av  # noqa: E402
 env = os.environ.get
 BOOTSTRAP = env("KAFKA_BOOTSTRAP_SERVERS", "localhost:9094")
 TOPIC = env("KAFKA_ANALYTICS_TOPIC", "wikipedia-analytics")
+RAW_TOPIC = env("KAFKA_TOPIC", "wikipedia-recent-changes")
 SOURCE_FILE = env("ANALYTICS_SOURCE_FILE", "")
 REFRESH_S = float(env("DASHBOARD_REFRESH_S", "5"))
 # Giới hạn bộ nhớ: topic giữ 24 giờ, Dashboard chỉ cần phần gần nhất.
@@ -56,6 +57,8 @@ class AnalyticsFeed:
         self.stats = av.ParseStats()
         self.error = ""
         self.last_message_at: float | None = None
+        self.kafka_total: int | None = None
+        self.total_at_last_result: int | None = None
         self.consumer = None
         if SOURCE_FILE:
             self._load_file(SOURCE_FILE)
@@ -96,6 +99,7 @@ class AnalyticsFeed:
             return
         deadline = time.time() + budget_s
         with self.lock:
+            before = self.last_message_at
             while time.time() < deadline:
                 msgs = self.consumer.consume(num_messages=batch, timeout=0.2)
                 if not msgs:
@@ -112,6 +116,19 @@ class AnalyticsFeed:
                         self.last_message_at = time.time()
             if len(self.records) > MAX_RECORDS:
                 del self.records[: len(self.records) - MAX_RECORDS]
+            self.kafka_total = self._raw_topic_total()
+            if self.last_message_at != before:
+                self.total_at_last_result = self.kafka_total
+
+    def _raw_topic_total(self) -> int | None:
+        """Tổng event Kafka đang giữ ở topic raw, hoặc None nếu không hỏi được broker."""
+        from confluent_kafka import TopicPartition
+        try:
+            partitions = self.consumer.list_topics(RAW_TOPIC, timeout=2).topics[RAW_TOPIC].partitions
+            return sum(self.consumer.get_watermark_offsets(TopicPartition(RAW_TOPIC, p), timeout=2)[1]
+                       for p in partitions)
+        except Exception:  # Kafka tắt là tình huống phải hiện trên trang, không được làm sập trang
+            return None
 
     def snapshot(self) -> list[dict]:
         with self.lock:
@@ -138,9 +155,11 @@ def fmt_time(ts) -> str:
 
 
 st.set_page_config(page_title="Wikipedia Recent Changes – Real-time", layout="wide")
+# Streamlit làm mờ nội dung mỗi lần làm mới; trên màn chiếu nền sáng trông như trang bị treo.
+st.markdown("<style>[data-stale='true'] {opacity: 1 !important;}</style>", unsafe_allow_html=True)
 st.title("Wikipedia Recent Changes – Real-time Analytics")
 st.caption(
-    "Nguồn: Kafka topic `wikipedia-analytics` do Spark Structured Streaming ghi. "
+    f"Nguồn: Kafka topic `{TOPIC}` do Spark Structured Streaming ghi. "
     "Mọi window tính theo **event time** (`meta.dt`), giờ UTC. "
     "Dashboard không hiển thị tên tài khoản người dùng."
 )
@@ -154,6 +173,23 @@ with st.sidebar:
     top_k = st.slider("Top wiki: số wiki hiển thị", 5, 20, 10)
     spike_minutes = st.slider("Spike: xem trong bao nhiêu phút gần nhất", 5, 120, 30)
     hide_bot_spikes = st.checkbox("Ẩn spike chủ yếu do bot", value=False)
+
+
+def render_pipeline_status(feed: AnalyticsFeed):
+    """Dải trạng thái để thấy ngay Spark chết và Kafka vẫn giữ dữ liệu khi demo recovery."""
+    age = None if feed.last_message_at is None else time.time() - feed.last_message_at
+    state, held = av.pipeline_status(age, feed.kafka_total, feed.total_at_last_result)
+    if state == "kafka_down":
+        st.error("Không truy cập được Kafka.", icon=":material/error:")
+    elif state == "stale":
+        st.error(f"Spark đã ngừng phát kết quả {age:.0f} giây. Kafka vẫn đang giữ dữ liệu.",
+                 icon=":material/warning:")
+    elif state == "ok":
+        st.success("Spark đang xử lý bình thường.", icon=":material/check_circle:")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Kafka đã nhận", "—" if feed.kafka_total is None else f"{feed.kafka_total:,}")
+    c2.metric("Kết quả Spark mới nhất", "—" if age is None else f"{age:.0f} giây trước")
+    c3.metric("Kafka giữ chờ Spark", f"+{held:,}" if held else "0")
 
 
 @st.fragment(run_every=REFRESH_S)
@@ -173,6 +209,9 @@ def render():
             "1 phút, watermark 1 phút). Kiểm tra bằng `sh scripts/consume_analytics.sh 10`."
         )
         return
+
+    if not SOURCE_FILE:
+        render_pipeline_status(feed)
 
     # ---- Hàng chỉ số tổng quan ----
     window, total, delta = av.latest_total(edit_df)
@@ -198,7 +237,7 @@ def render():
     left, right = st.columns([3, 2])
     with left:
         st.subheader("Số event mỗi phút (event time)")
-        timeline = av.edits_timeline(edit_df)
+        timeline = av.timeline_with_gaps(av.edits_timeline(edit_df))
         long = timeline.melt(id_vars="window_start", value_vars=["bot_edits", "non_bot_edits"],
                              var_name="loại", value_name="event")
         long["loại"] = long["loại"].map({"bot_edits": "Bot", "non_bot_edits": "Human + Unknown"})
@@ -256,13 +295,16 @@ def render():
     if shown.empty:
         st.info("Không có bài viết nào vượt ngưỡng trong khoảng thời gian đang xem.")
     else:
+        table = shown.copy()
+        table.insert(2, "Lịch sử", [av.history_url(w, t) for w, t in zip(table["wiki"], table["title"])])
         st.dataframe(
-            shown.rename(columns={
+            table.rename(columns={
                 "wiki": "Wiki", "title": "Bài viết", "edit_count": "Lượt sửa (2 phút)",
                 "distinct_users": "Người sửa (≈)", "bot_edits": "Bot", "human_edits": "Human",
                 "window_start": "Từ", "window_end": "Đến", "windows_flagged": "Số window vượt ngưỡng",
                 "likely_bot_driven": "Do bot"}),
-            hide_index=True, use_container_width=True)
+            hide_index=True, use_container_width=True,
+            column_config={"Lịch sử": st.column_config.LinkColumn(display_text="Mở")})
 
     # ---- Độ trễ và tình trạng pipeline ----
     with st.expander("Độ trễ phát kết quả và tình trạng dữ liệu"):

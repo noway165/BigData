@@ -1,0 +1,13 @@
+# Nền sáng cố định: màn chiếu trong lớp khó đọc giao diện tối.
+[theme]
+base = "light"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f2f2ef"
+textColor = "#0b0b0b"
+primaryColor = "#3B7DD8"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

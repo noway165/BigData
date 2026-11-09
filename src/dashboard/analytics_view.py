@@ -14,10 +14,20 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from urllib.parse import quote
 
 import pandas as pd
 
 METRICS = ("edit_count", "bot_ratio", "activity_spike")
+
+# Job khỏe phát kết quả ít nhất mỗi phút khi window đóng, nên im lâu hơn mức này là có sự cố.
+STALE_AFTER_S = 75
+
+SPECIAL_SITES = {"commonswiki": "commons.wikimedia.org", "wikidatawiki": "www.wikidata.org",
+                 "metawiki": "meta.wikimedia.org", "specieswiki": "species.wikimedia.org",
+                 "mediawikiwiki": "www.mediawiki.org"}
+WIKI_FAMILIES = ("wiktionary", "wikiquote", "wikibooks", "wikisource", "wikinews",
+                 "wikiversity", "wikivoyage")
 
 # Khóa tự nhiên của một dòng output, dùng để khử bản ghi lặp.
 NATURAL_KEYS = {
@@ -107,6 +117,44 @@ def edits_timeline(edit_df: pd.DataFrame) -> pd.DataFrame:
            .sort_values("window_start"))
     out["non_bot_edits"] = out["edit_count"] - out["bot_edits"]
     return out
+
+
+def timeline_with_gaps(timeline: pd.DataFrame) -> pd.DataFrame:
+    """Phút không có dữ liệu thành NaN để biểu đồ đứt đoạn; nối liền sẽ che mất sự cố."""
+    if timeline.empty:
+        return timeline
+    return timeline.set_index("window_start").asfreq("min").reset_index()
+
+
+def history_url(wiki: str, title: str) -> str | None:
+    """Trang lịch sử sửa đổi trên Wikimedia, hoặc None nếu không nhận ra mã wiki."""
+    site = SPECIAL_SITES.get(wiki)
+    if site is None:
+        family = next((f for f in WIKI_FAMILIES if wiki.endswith(f)), None)
+        if family:
+            site = f"{wiki[:-len(family)].replace('_', '-')}.{family}.org"
+        elif wiki.endswith("wiki"):
+            site = f"{wiki[:-4].replace('_', '-')}.wikipedia.org"
+        else:
+            return None
+    return f"https://{site}/w/index.php?title={quote(title, safe='')}&action=history"
+
+
+def pipeline_status(age_s: float | None, kafka_total: int | None, total_at_last_result: int | None,
+                    stale_after: float = STALE_AFTER_S) -> tuple[str, int]:
+    """(trạng thái, số event Kafka đang giữ chờ Spark).
+
+    Trạng thái: kafka_down | waiting | stale | ok. `held` chỉ có nghĩa khi stale: lúc Spark
+    khỏe thì chênh lệch này chỉ là dữ liệu đang chờ window đóng.
+    """
+    if kafka_total is None:
+        return "kafka_down", 0
+    if age_s is None:
+        return "waiting", 0
+    if age_s > stale_after:
+        baseline = kafka_total if total_at_last_result is None else total_at_last_result
+        return "stale", max(0, kafka_total - baseline)
+    return "ok", 0
 
 
 def latest_total(edit_df: pd.DataFrame) -> tuple[pd.Timestamp | None, int, int | None]:

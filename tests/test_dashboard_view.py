@@ -133,6 +133,37 @@ def test_empty_frames_do_not_crash():
     assert av.result_delay_seconds(frames).empty
 
 
+def test_timeline_marks_missing_minutes_but_latest_total_ignores_them():
+    recs = [edit("2026-11-07T18:40:00.000Z", "enwiki", 10), edit("2026-11-07T18:42:00.000Z", "enwiki", 7)]
+    df = av.to_frames(recs)["edit_count"]
+    gaps = av.timeline_with_gaps(av.edits_timeline(df))
+    assert len(gaps) == 3 and pd.isna(gaps.iloc[1]["edit_count"])
+    assert av.latest_total(df)[1:] == (7, -3)
+    assert av.timeline_with_gaps(av.edits_timeline(av.to_frames([])["edit_count"])).empty
+
+
+@pytest.mark.parametrize("wiki,site", [
+    ("enwiki", "en.wikipedia.org"), ("commonswiki", "commons.wikimedia.org"),
+    ("wikidatawiki", "www.wikidata.org"), ("dewiktionary", "de.wiktionary.org"),
+    ("zh_min_nanwiki", "zh-min-nan.wikipedia.org"),
+])
+def test_history_url_maps_wiki_codes(wiki, site):
+    assert av.history_url(wiki, "A B/C") == f"https://{site}/w/index.php?title=A%20B%2FC&action=history"
+
+
+def test_history_url_unknown_wiki_has_no_link():
+    assert av.history_url("unknownsite", "X") is None
+
+
+def test_pipeline_status_states():
+    assert av.pipeline_status(10, None, 5) == ("kafka_down", 0)
+    assert av.pipeline_status(None, 100, None) == ("waiting", 0)
+    assert av.pipeline_status(10, 100, 50) == ("ok", 0)  # healthy: the difference means nothing
+    assert av.pipeline_status(av.STALE_AFTER_S + 1, 100, 60) == ("stale", 40)
+    assert av.pipeline_status(av.STALE_AFTER_S + 1, 100, None) == ("stale", 0)
+    assert av.pipeline_status(av.STALE_AFTER_S + 1, 50, 60) == ("stale", 0)  # never negative
+
+
 def test_result_delay_is_emitted_minus_window_end():
     recs = [edit("2026-11-07T18:40:00.000Z", "enwiki", 1, emitted="2026-11-07T18:42:10.000Z")]
     delay = av.result_delay_seconds(av.to_frames(recs))
