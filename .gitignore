@@ -7,3 +7,5 @@ __pycache__/
 outputs/experiment_results/*/sample.jsonl
 # Log của job chạy ad-hoc, không phải bằng chứng thí nghiệm.
 outputs/*.log
+# Knowledge base do scripts/build_kb.sh sinh ra, dựng lại được từ raw Parquet.
+outputs/kb/
